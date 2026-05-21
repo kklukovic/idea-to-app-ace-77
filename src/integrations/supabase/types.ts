@@ -14,7 +14,134 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      credit_usage: {
+        Row: {
+          action: string
+          ai_model: string | null
+          created_at: string
+          credits_used: number
+          id: string
+          project_id: string | null
+          user_id: string
+        }
+        Insert: {
+          action: string
+          ai_model?: string | null
+          created_at?: string
+          credits_used: number
+          id?: string
+          project_id?: string | null
+          user_id: string
+        }
+        Update: {
+          action?: string
+          ai_model?: string | null
+          created_at?: string
+          credits_used?: number
+          id?: string
+          project_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "credit_usage_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "credit_usage_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          credits: number
+          email: string
+          founder_tier: string
+          full_name: string | null
+          id: string
+        }
+        Insert: {
+          created_at?: string
+          credits?: number
+          email: string
+          founder_tier?: string
+          full_name?: string | null
+          id: string
+        }
+        Update: {
+          created_at?: string
+          credits?: number
+          email?: string
+          founder_tier?: string
+          full_name?: string | null
+          id?: string
+        }
+        Relationships: []
+      }
+      projects: {
+        Row: {
+          blueprint_markdown: string | null
+          chosen_idea: Json | null
+          created_at: string
+          id: string
+          ideas: Json | null
+          launch_kit_markdown: string | null
+          manual_research: string | null
+          name: string
+          profile_data: Json | null
+          scored_ideas: Json | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          blueprint_markdown?: string | null
+          chosen_idea?: Json | null
+          created_at?: string
+          id?: string
+          ideas?: Json | null
+          launch_kit_markdown?: string | null
+          manual_research?: string | null
+          name?: string
+          profile_data?: Json | null
+          scored_ideas?: Json | null
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          blueprint_markdown?: string | null
+          chosen_idea?: Json | null
+          created_at?: string
+          id?: string
+          ideas?: Json | null
+          launch_kit_markdown?: string | null
+          manual_research?: string | null
+          name?: string
+          profile_data?: Json | null
+          scored_ideas?: Json | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "projects_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
