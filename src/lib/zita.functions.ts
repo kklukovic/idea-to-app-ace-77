@@ -335,12 +335,12 @@ export const saveProfile = createServerFn({ method: "POST" })
     name: z.string().max(200).optional(),
   }).parse(d))
   .handler(async ({ data, context }) => {
-    const update: Record<string, unknown> = {
-      profile_data: data.profile,
+    const update = {
+      profile_data: data.profile as never,
       manual_research: data.manual_research,
       status: "profile",
+      ...(data.name && data.name.trim() ? { name: data.name.trim() } : {}),
     };
-    if (data.name && data.name.trim()) update.name = data.name.trim();
     const { error } = await context.supabase.from("projects").update(update).eq("id", data.projectId);
     if (error) throw new Error(error.message);
     return { ok: true };
