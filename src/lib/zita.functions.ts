@@ -213,9 +213,9 @@ Score each 1-10 on: pain_level, build_ease, monetization_potential, content_pote
       },
     };
 
-    const result = (await callAI({ system, user, tool })) as { scored: Array<{ name: string; total: number }> };
+    const result = (await callAI({ system, user, tool })) as { scored: ScoredIdea[] };
     result.scored.sort((a, b) => b.total - a.total);
-    await context.supabase.from("projects").update({ scored_ideas: result.scored, status: "score" }).eq("id", data.projectId);
+    await context.supabase.from("projects").update({ scored_ideas: result.scored as never, status: "score" }).eq("id", data.projectId);
     return { scored: result.scored };
   });
 
