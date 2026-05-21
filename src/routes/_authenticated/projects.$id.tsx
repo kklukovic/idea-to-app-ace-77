@@ -1,5 +1,5 @@
 import { createFileRoute, notFound } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
@@ -36,7 +36,7 @@ function Workspace() {
   });
 
   const reachable = stepIndex(project.status);
-  const [tab, setTab] = useState<Status>(project.status as Status === "completed" ? "launch" : (project.status as Status));
+  const [tab, setTab] = useState<Status>((project.status === "completed" ? "launch" : project.status) as Status);
 
   const refresh = () => qc.invalidateQueries({ queryKey: ["project", initial.id] });
 
@@ -450,5 +450,3 @@ function renderMd(src: string): string {
       .replace(/\*([^*]+)\*/g, "<em>$1</em>");
   }
 }
-
-useEffect; // keep import for future
