@@ -2,6 +2,33 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
+export type Idea = {
+  name: string;
+  promise: string;
+  problem: string;
+  evidence: string;
+  target_user: string;
+  why_they_care: string;
+  usage_frequency: string;
+  monetization_angle: string;
+  build_difficulty_1_10: number;
+  content_angle: string;
+};
+
+export type ScoredIdea = {
+  name: string;
+  scores: {
+    pain_level: number;
+    build_ease: number;
+    monetization_potential: number;
+    content_potential: number;
+    conversation_potential: number;
+    founder_offer_potential: number;
+  };
+  total: number;
+  verdict: string;
+};
+
 const AI_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
 const DEFAULT_MODEL = "google/gemini-3-flash-preview";
 
@@ -126,8 +153,8 @@ Generate 5-7 practical digital tool ideas.`;
       },
     };
 
-    const result = (await callAI({ system, user, tool })) as { ideas: unknown[] };
-    await context.supabase.from("projects").update({ ideas: result.ideas, status: "discover" }).eq("id", data.projectId);
+    const result = (await callAI({ system, user, tool })) as { ideas: Idea[] };
+    await context.supabase.from("projects").update({ ideas: result.ideas as never, status: "discover" }).eq("id", data.projectId);
     return { ideas: result.ideas };
   });
 
