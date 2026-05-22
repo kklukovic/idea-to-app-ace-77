@@ -57,7 +57,7 @@ function Dashboard() {
             {projects.map((p) => {
               const m = statusMeta[p.status] ?? statusMeta.profile;
               return (
-                <Link key={p.id} to="/projects/$id" params={{ id: p.id }} className="group rounded-xl border border-border bg-card p-5 shadow-card transition-colors hover:border-primary/50">
+                <Link key={p.id} to="/project/$id" params={{ id: p.id }} className="group rounded-xl border border-border bg-card p-5 shadow-card transition-colors hover:border-primary/50">
                   <div className="flex items-start justify-between">
                     <div>
                       <div className="font-semibold group-hover:text-primary">{p.name}</div>

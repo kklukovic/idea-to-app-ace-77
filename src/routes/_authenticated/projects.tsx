@@ -36,7 +36,7 @@ function Projects() {
               {projects.map((p) => (
                 <tr key={p.id} className="border-b border-border/60 last:border-0 hover:bg-accent/20">
                   <td className="px-5 py-4">
-                    <Link to="/projects/$id" params={{ id: p.id }} className="font-medium hover:text-primary">{p.name}</Link>
+                    <Link to="/project/$id" params={{ id: p.id }} className="font-medium hover:text-primary">{p.name}</Link>
                   </td>
                   <td className="px-5 py-4 capitalize text-muted-foreground">{p.status}</td>
                   <td className="px-5 py-4 text-muted-foreground">{new Date(p.updated_at).toLocaleDateString()}</td>

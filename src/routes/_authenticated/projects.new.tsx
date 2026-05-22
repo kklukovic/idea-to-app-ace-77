@@ -11,6 +11,6 @@ export const Route = createFileRoute("/_authenticated/projects/new")({
       .select("id")
       .single();
     if (error || !data) throw new Error(error?.message ?? "Failed to create project");
-    throw redirect({ to: "/projects/$id", params: { id: data.id } });
+    throw redirect({ to: "/project/$id", params: { id: data.id } });
   },
 });

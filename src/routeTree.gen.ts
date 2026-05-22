@@ -17,7 +17,7 @@ import { Route as AuthenticatedProjectsRouteImport } from './routes/_authenticat
 import { Route as AuthenticatedLibraryRouteImport } from './routes/_authenticated/library'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedProjectsNewRouteImport } from './routes/_authenticated/projects.new'
-import { Route as AuthenticatedProjectsIdRouteImport } from './routes/_authenticated/projects.$id'
+import { Route as AuthenticatedProjectIdRouteImport } from './routes/_authenticated/project.$id'
 
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
@@ -59,10 +59,10 @@ const AuthenticatedProjectsNewRoute =
     path: '/new',
     getParentRoute: () => AuthenticatedProjectsRoute,
   } as any)
-const AuthenticatedProjectsIdRoute = AuthenticatedProjectsIdRouteImport.update({
-  id: '/$id',
-  path: '/$id',
-  getParentRoute: () => AuthenticatedProjectsRoute,
+const AuthenticatedProjectIdRoute = AuthenticatedProjectIdRouteImport.update({
+  id: '/project/$id',
+  path: '/project/$id',
+  getParentRoute: () => AuthenticatedRoute,
 } as any)
 
 export interface FileRoutesByFullPath {
@@ -72,7 +72,7 @@ export interface FileRoutesByFullPath {
   '/library': typeof AuthenticatedLibraryRoute
   '/projects': typeof AuthenticatedProjectsRouteWithChildren
   '/settings': typeof AuthenticatedSettingsRoute
-  '/projects/$id': typeof AuthenticatedProjectsIdRoute
+  '/project/$id': typeof AuthenticatedProjectIdRoute
   '/projects/new': typeof AuthenticatedProjectsNewRoute
 }
 export interface FileRoutesByTo {
@@ -82,7 +82,7 @@ export interface FileRoutesByTo {
   '/library': typeof AuthenticatedLibraryRoute
   '/projects': typeof AuthenticatedProjectsRouteWithChildren
   '/settings': typeof AuthenticatedSettingsRoute
-  '/projects/$id': typeof AuthenticatedProjectsIdRoute
+  '/project/$id': typeof AuthenticatedProjectIdRoute
   '/projects/new': typeof AuthenticatedProjectsNewRoute
 }
 export interface FileRoutesById {
@@ -94,7 +94,7 @@ export interface FileRoutesById {
   '/_authenticated/library': typeof AuthenticatedLibraryRoute
   '/_authenticated/projects': typeof AuthenticatedProjectsRouteWithChildren
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
-  '/_authenticated/projects/$id': typeof AuthenticatedProjectsIdRoute
+  '/_authenticated/project/$id': typeof AuthenticatedProjectIdRoute
   '/_authenticated/projects/new': typeof AuthenticatedProjectsNewRoute
 }
 export interface FileRouteTypes {
@@ -106,7 +106,7 @@ export interface FileRouteTypes {
     | '/library'
     | '/projects'
     | '/settings'
-    | '/projects/$id'
+    | '/project/$id'
     | '/projects/new'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -116,7 +116,7 @@ export interface FileRouteTypes {
     | '/library'
     | '/projects'
     | '/settings'
-    | '/projects/$id'
+    | '/project/$id'
     | '/projects/new'
   id:
     | '__root__'
@@ -127,7 +127,7 @@ export interface FileRouteTypes {
     | '/_authenticated/library'
     | '/_authenticated/projects'
     | '/_authenticated/settings'
-    | '/_authenticated/projects/$id'
+    | '/_authenticated/project/$id'
     | '/_authenticated/projects/new'
   fileRoutesById: FileRoutesById
 }
@@ -195,23 +195,21 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedProjectsNewRouteImport
       parentRoute: typeof AuthenticatedProjectsRoute
     }
-    '/_authenticated/projects/$id': {
-      id: '/_authenticated/projects/$id'
-      path: '/$id'
-      fullPath: '/projects/$id'
-      preLoaderRoute: typeof AuthenticatedProjectsIdRouteImport
-      parentRoute: typeof AuthenticatedProjectsRoute
+    '/_authenticated/project/$id': {
+      id: '/_authenticated/project/$id'
+      path: '/project/$id'
+      fullPath: '/project/$id'
+      preLoaderRoute: typeof AuthenticatedProjectIdRouteImport
+      parentRoute: typeof AuthenticatedRoute
     }
   }
 }
 
 interface AuthenticatedProjectsRouteChildren {
-  AuthenticatedProjectsIdRoute: typeof AuthenticatedProjectsIdRoute
   AuthenticatedProjectsNewRoute: typeof AuthenticatedProjectsNewRoute
 }
 
 const AuthenticatedProjectsRouteChildren: AuthenticatedProjectsRouteChildren = {
-  AuthenticatedProjectsIdRoute: AuthenticatedProjectsIdRoute,
   AuthenticatedProjectsNewRoute: AuthenticatedProjectsNewRoute,
 }
 
@@ -225,6 +223,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedLibraryRoute: typeof AuthenticatedLibraryRoute
   AuthenticatedProjectsRoute: typeof AuthenticatedProjectsRouteWithChildren
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
+  AuthenticatedProjectIdRoute: typeof AuthenticatedProjectIdRoute
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
@@ -232,6 +231,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedLibraryRoute: AuthenticatedLibraryRoute,
   AuthenticatedProjectsRoute: AuthenticatedProjectsRouteWithChildren,
   AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
+  AuthenticatedProjectIdRoute: AuthenticatedProjectIdRoute,
 }
 
 const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
@@ -246,3 +246,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
