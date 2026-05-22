@@ -78,10 +78,11 @@ async function callAI(opts: {
 
 async function chargeCredits(ctx: { supabase: any; userId: string }, projectId: string, action: Action) {
   const cost = COSTS[action];
-  const { data: prof, error: pErr } = await ctx.supabase.from("profiles").select("credits").eq("id", ctx.userId).single();
+  // Use admin client: end users are not permitted to update `credits` directly (RLS column grant).
+  const { data: prof, error: pErr } = await supabaseAdmin.from("profiles").select("credits").eq("id", ctx.userId).single();
   if (pErr || !prof) throw new Error("Could not read credits");
   if (prof.credits < cost) throw new Error(`Not enough credits — need ${cost}, have ${prof.credits}`);
-  const { error: uErr } = await ctx.supabase.from("profiles").update({ credits: prof.credits - cost }).eq("id", ctx.userId);
+  const { error: uErr } = await supabaseAdmin.from("profiles").update({ credits: prof.credits - cost }).eq("id", ctx.userId);
   if (uErr) throw new Error("Could not deduct credits");
   await ctx.supabase.from("credit_usage").insert({
     user_id: ctx.userId, project_id: projectId, action, credits_used: cost, ai_model: DEFAULT_MODEL,
