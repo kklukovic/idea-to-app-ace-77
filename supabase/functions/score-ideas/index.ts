@@ -64,7 +64,7 @@ Deno.serve(async (req: Request) => {
 IDEAS: ${JSON.stringify(project.ideas)}
 CONTEXT: skill level ${profile.skill_level}, time available ${profile.time_per_week}, audience ${profile.audience}.
 Score each idea 1-10 on: pain_level, build_ease (given their skill+time), monetization_potential, content_potential, conversation_potential, founder_offer_potential.
-Return ONLY a JSON array sorted by total descending, each: { name, scores: {pain_level, build_ease, monetization_potential, content_potential, conversation_potential, founder_offer_potential}, total (sum), verdict (1-2 sentences), rank (number) }. No prose outside JSON.`;
+Return ONLY a JSON array sorted by total descending, each: { name, scores: {pain_level, build_ease, monetization_potential, content_potential, conversation_potential, founder_offer_potential}, total (sum), verdict (max 12 words), rank (number) }. No prose outside JSON.`;
 
     // 6. Call Gemini 2.5 Flash
     const geminiKey = Deno.env.get("GEMINI_API_KEY");
@@ -79,7 +79,7 @@ Return ONLY a JSON array sorted by total descending, each: { name, scores: {pain
           contents: [{ role: "user", parts: [{ text: prompt }] }],
           generationConfig: {
             temperature: 0.5,
-            maxOutputTokens: 4096,
+            maxOutputTokens: 8192,
             responseMimeType: "application/json",
           },
         }),
