@@ -331,30 +331,71 @@ function RadioGroup({ label, value, options, onChange }: { label: string; value:
 }
 
 // ---------- Step 2: Discover ----------
-const RESEARCH_PROMPT = `You are a market research assistant. I am looking for real, painful problems people have in a specific niche so I can build a simple app or tool to solve one.
+const SUPER_IDEAS_PROMPT = `Before you run this:
+1. Fill in the three bracketed sections below (your niche, audience, background).
+2. Run it in ChatGPT, Claude, or Gemini with web search / browsing turned ON. Without web search the AI will guess instead of research.
+3. Paste the full output back into ZITA's Deep Research box.
 
-NICHE / TOPIC: [describe your niche or topic here]
+---
 
-Search your knowledge of Reddit threads, YouTube comments, forums, and online communities related to this niche. Surface the real frustrations, recurring complaints, repeated questions, and "I wish there was a tool for this" moments.
+You are a ruthless micro-SaaS strategist, market researcher, and product validator.
 
-Give me:
-1. The top 10 recurring pain points people mention
-2. For each, a direct example of how people phrase it in their own words
-3. Where it shows up (which subreddit, type of video, forum)
-4. How often it comes up (very common, common, or occasional)
+Your job is not to give generic AI app ideas. Your job is to give 10 highly specific, realistic app ideas that fit the person below, their skills, their market, and the real problems their audience is actively trying to solve right now.
 
-Focus on problems that come up repeatedly, cause real frustration or wasted time, and could be solved by a simple web tool, calculator, tracker, planner, or assistant. Avoid generic observations. Give me the specific, raw complaints in people's own words. Output as a clean list I can copy.`;
+ABOUT ME (edit these):
+- My niche / topic: [YOUR NICHE, e.g. make money online, health, weight loss, productivity]
+- My audience: [YOUR AUDIENCE, e.g. solopreneurs, coaches, affiliate marketers, small business owners]
+- My background and skills: [YOUR BACKGROUND, what you can build and what you know]
+
+MY PREFERENCES (edit if needed):
+- I want simple, useful, focused apps, not a complex startup
+- I like practical tools, content tools, lead-gen tools, workflow tools, simple business utilities
+- I want lean apps I can build and validate fast
+- I prefer tools that solve one painful problem clearly
+- I want low-ticket products, around $10 to $20 per month
+- I want products people use daily, weekly, or monthly with low churn
+- No bloated all-in-one tools, no generic "AI writer" unless there is a strong niche angle
+
+YOUR RESEARCH TASK:
+Research the biggest recurring, annoying, time-wasting, or revenue-blocking problems my audience discusses online. Focus on Reddit threads, niche communities, product review complaints, tool comparisons, "how do I" questions, "I hate that this tool" complaints, repetitive manual tasks, content bottlenecks, lead-gen bottlenecks, follow-up bottlenecks, planning and reporting frustrations, and tools that are too expensive or too complex for solo operators.
+
+I want ideas with: recurring need, habit loop, workflow lock-in, ongoing content or lead-gen or tracking need, data that accumulates over time, or convenience people will not want to lose.
+
+Do not give trendy nonsense, vague categories, ideas needing a big team or funding, or ideas people use once and abandon.
+
+FOR EACH OF THE 10 IDEAS, USE THIS STRUCTURE:
+1. App Name (clear, marketable)
+2. Core Problem (exact pain, who feels it most)
+3. Evidence From Market (specific complaints/patterns you found online)
+4. Why This Fits Me (based on the ABOUT ME section)
+5. Daily / Weekly / Monthly Use Case (why they return)
+6. Why People Would Keep Paying (what makes it sticky)
+7. Simplicity Score 1-10 (what the MVP includes and excludes)
+8. Pricing Fit ($10/$12/$15/$19 or low-ticket usage, with reasoning)
+9. Fast MVP Version (smallest useful build)
+10. Unique Angle (how it stands out)
+11. Churn Risk (why they might leave, how to prevent it)
+12. Validation Test (fastest way to validate before building)
+13. Market Score 1-10 for: pain level, willingness to pay, simplicity, retention, fit for audience, fit for me. Then a short verdict.
+
+AFTER ALL 10 IDEAS:
+1. Rank all 10 from best to worst for me
+2. Pick the top 3 to seriously consider, and for each: why it beats the others, who buys first, the easiest way to get the first 5 paying users
+3. Give 3 ideas that are sexy but likely to fail, 3 traps to avoid, and the single best idea for low churn and stable monthly revenue
+
+RULES:
+Be brutally honest. Think commercially, not creatively. Prefer boring but sticky over exciting but fragile. Prefer narrow tools with strong recurring use. Reject ideas that only sound good on paper. Use real-world logic. Output in a clean, structured format.`;
 
 const MODE_CARDS = [
   {
     key: "fast" as const,
     title: "⚡ Fast AI Mode",
-    desc: "ZITA generates ideas from your profile and AI reasoning. Fastest way to start. No research needed. Good for a first pass.",
+    desc: "Instant ideas from your niche and profile. Good first pass. May be more generic.",
   },
   {
     key: "research" as const,
-    title: "📋 Research Mode",
-    desc: "Paste real data from Reddit, YouTube, or your customers. ZITA grounds ideas in actual demand, not guesses. Better quality. Takes about 10 minutes.",
+    title: "📋 Deep Research Mode",
+    desc: "Run the SUPER IDEAS PROMPT with web search ON, paste the output. Ideas grounded in real market data — much higher signal.",
   },
 ];
 
@@ -407,7 +448,7 @@ function DiscoverPanel({ project, onSaved }: { project: any; onSaved: (next: Sta
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const copyPrompt = () =>
-    navigator.clipboard.writeText(RESEARCH_PROMPT).then(() => toast.success("Research prompt copied!"));
+    navigator.clipboard.writeText(SUPER_IDEAS_PROMPT).then(() => toast.success("Prompt copied!"));
 
   const goToScore = async () => {
     if (["profile", "discover"].includes(project.status as string)) {
@@ -466,28 +507,23 @@ function DiscoverPanel({ project, onSaved }: { project: any; onSaved: (next: Sta
         </Button>
       )}
 
-      {/* Research Mode: instructions → prompt → textarea → generate */}
+      {/* Deep Research Mode: instructions → prompt → textarea → generate */}
       {!ideas && !running && mode === "research" && (
         <div className="space-y-4">
-          <div className="rounded-lg border border-border bg-muted/20 p-4 text-sm">
-            <p className="font-medium text-foreground">Don't have research yet?</p>
-            <ol className="ml-4 mt-2 list-decimal space-y-1 text-muted-foreground">
-              <li>Copy the prompt below</li>
-              <li>Run it in ChatGPT, Claude, or Gemini</li>
-              <li>Paste the results in the box below</li>
-            </ol>
-          </div>
+          <p className="text-sm text-muted-foreground">
+            For real, researched ideas: copy the prompt below, fill in the bracketed parts, run it in ChatGPT, Claude, or Gemini with web search ON, then paste the full output here.
+          </p>
 
           <div className="space-y-1.5">
             <div className="flex items-center justify-between">
-              <Label className="text-xs uppercase tracking-wider text-muted-foreground">Research prompt</Label>
+              <Label className="text-xs uppercase tracking-wider text-muted-foreground">SUPER IDEAS PROMPT</Label>
               <Button variant="ghost" size="sm" onClick={copyPrompt} className="h-7 gap-1.5 px-2 text-xs">
                 <Copy className="h-3 w-3" />
                 Copy prompt
               </Button>
             </div>
             <div className="max-h-52 overflow-y-auto rounded-lg border border-border bg-muted/30 p-3 font-mono text-xs leading-relaxed text-muted-foreground whitespace-pre-wrap">
-              {RESEARCH_PROMPT}
+              {SUPER_IDEAS_PROMPT}
             </div>
           </div>
 
