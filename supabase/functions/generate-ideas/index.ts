@@ -103,19 +103,20 @@ Return ONLY a JSON array of objects, no prose, each: { name (max 4 words), promi
     const rawText: string =
       geminiJson.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
 
-    // 8. Parse JSON safely — strip any ```json fences just in case
+    // 8. Parse JSON safely.
+    // responseMimeType:"application/json" is set, but Gemini occasionally still wraps
+    // output in ```json fences or adds leading text. The regex below extracts the
+    // content between any fences first; if no fences are found it uses the raw text.
     let ideas: unknown[];
     try {
-      const cleaned = rawText
-        .replace(/^```json\s*/i, "")
-        .replace(/^```\s*/i, "")
-        .replace(/```\s*$/, "")
-        .trim();
-      const parsed = JSON.parse(cleaned);
+      const fenced = rawText.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
+      const toParse = (fenced ? fenced[1] : rawText).trim();
+      if (!toParse) throw new Error("empty response");
+      const parsed = JSON.parse(toParse);
       if (!Array.isArray(parsed)) throw new Error("not an array");
       ideas = parsed;
-    } catch {
-      console.error("JSON parse failed. Raw (first 500):", rawText.slice(0, 500));
+    } catch (parseErr) {
+      console.error("JSON parse failed:", parseErr, "| Raw (first 500):", rawText.slice(0, 500));
       return fail("AI returned invalid JSON — try again.", 502);
     }
 

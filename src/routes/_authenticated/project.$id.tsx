@@ -165,29 +165,30 @@ function StepBar({ active, reached, status, onPick }: { active: Status; reached:
 }
 
 // ---------- Step 1: Profile (fully functional) ----------
+const NICHES = ["Make Money Online", "Health & Fitness", "Weight Loss", "Productivity", "Relationships", "Creators & Content", "Local Business", "Affiliate Marketing"];
 const TOOL_TYPES = ["Lead magnet", "Paid mini-tool", "Client tool", "Internal business tool", "Not sure yet"];
 const SKILLS = ["Beginner", "Intermediate", "Advanced"];
-const TIMES = ["<5h", "5-10h", "10-20h", "20+h"];
+const TIMES = ["Under 5h", "5-10h", "10-20h", "20+h"];
 
 function ProfilePanel({ project, onSaved }: { project: any; onSaved: (next: Status) => void }) {
   const existing = (project.profile_data ?? {}) as Record<string, string>;
   const [form, setForm] = useState({
+    niche: existing.niche ?? "",
     expertise: existing.expertise ?? "",
     audience: existing.audience ?? "",
     offer: existing.offer ?? "",
     topic: existing.topic ?? "",
     tool_type: existing.tool_type ?? "Not sure yet",
     skill_level: existing.skill_level ?? "Beginner",
-    time_per_week: existing.time_per_week ?? "5-10h",
+    // normalise legacy "<5h" value to the new label
+    time_per_week: (existing.time_per_week === "<5h" ? "Under 5h" : existing.time_per_week) || "5-10h",
   });
   const [saving, setSaving] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(
+    !!(existing.expertise || existing.audience || existing.offer || existing.topic),
+  );
 
-  const submit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!form.expertise.trim() || !form.audience.trim() || !form.offer.trim()) {
-      toast.error("Please fill the first three fields.");
-      return;
-    }
+  const persist = async () => {
     setSaving(true);
     const nextStatus = project.status === "profile" ? "discover" : project.status;
     const { error } = await supabase
@@ -195,40 +196,103 @@ function ProfilePanel({ project, onSaved }: { project: any; onSaved: (next: Stat
       .update({ profile_data: form, status: nextStatus, updated_at: new Date().toISOString() })
       .eq("id", project.id);
     setSaving(false);
-    if (error) { toast.error(error.message); return; }
-    toast.success("Profile saved — Discover unlocked");
-    onSaved("discover");
+    if (error) { toast.error(error.message); return false; }
+    return true;
+  };
+
+  const handleSave = async () => {
+    if (await persist()) {
+      toast.success("Profile saved — Discover unlocked");
+      onSaved("discover");
+    }
+  };
+
+  const handleSkip = async () => {
+    if (await persist()) onSaved("discover");
   };
 
   return (
-    <form onSubmit={submit} className="space-y-5 rounded-xl border border-border bg-card p-6 shadow-card">
+    <div className="space-y-6 rounded-xl border border-border bg-card p-6 shadow-card">
       <div>
         <h2 className="text-lg font-semibold">Step 1 — Your Profile</h2>
-        <p className="mt-1 text-sm text-muted-foreground">ZITA uses this to tailor every idea to you.</p>
+        <p className="mt-1 text-sm text-muted-foreground">
+          ZITA uses this to tailor every idea to you. Fill what you know — nothing is required.
+        </p>
       </div>
 
-      <Field label="What do you do? *">
-        <Textarea rows={2} value={form.expertise} onChange={(e) => setForm({ ...form, expertise: e.target.value })} placeholder="Your expertise / background" />
-      </Field>
-      <Field label="Who do you help? *">
-        <Input value={form.audience} onChange={(e) => setForm({ ...form, audience: e.target.value })} placeholder="Target audience" />
-      </Field>
-      <Field label="What do you sell or want to sell? *">
-        <Textarea rows={2} value={form.offer} onChange={(e) => setForm({ ...form, offer: e.target.value })} placeholder="Your current or planned offer" />
-      </Field>
-      <Field label="Problem area or niche (optional)">
-        <Input value={form.topic} onChange={(e) => setForm({ ...form, topic: e.target.value })} />
-      </Field>
+      {/* Niche picker */}
+      <div className="space-y-2">
+        <Label className="text-xs uppercase tracking-wider text-muted-foreground">Pick a niche</Label>
+        <div className="flex flex-wrap gap-2">
+          {NICHES.map((n) => (
+            <button
+              key={n}
+              type="button"
+              onClick={() => setForm({ ...form, niche: form.niche === n ? "" : n })}
+              className={cn(
+                "rounded-full border px-3 py-1.5 text-sm transition",
+                form.niche === n
+                  ? "border-primary bg-primary/15 text-primary"
+                  : "border-border bg-card text-muted-foreground hover:border-primary/50 hover:text-foreground",
+              )}
+            >
+              {n}
+            </button>
+          ))}
+        </div>
+        <Input
+          value={NICHES.includes(form.niche) ? "" : form.niche}
+          onChange={(e) => setForm({ ...form, niche: e.target.value })}
+          placeholder="Or type your own niche…"
+          className="mt-1"
+        />
+      </div>
 
       <RadioGroup label="Preferred tool type" value={form.tool_type} options={TOOL_TYPES} onChange={(v) => setForm({ ...form, tool_type: v })} />
       <RadioGroup label="Your build skill level" value={form.skill_level} options={SKILLS} onChange={(v) => setForm({ ...form, skill_level: v })} />
       <RadioGroup label="Time available per week" value={form.time_per_week} options={TIMES} onChange={(v) => setForm({ ...form, time_per_week: v })} />
 
-      <Button type="submit" disabled={saving} className="bg-gradient-electric text-primary-foreground shadow-glow">
-        {saving && <Loader2 className="h-4 w-4 animate-spin" />}
-        Save & Continue → Discover <ArrowRight className="h-4 w-4" />
-      </Button>
-    </form>
+      {/* Collapsible optional detail */}
+      <div className="overflow-hidden rounded-lg border border-border">
+        <button
+          type="button"
+          onClick={() => setMoreOpen(!moreOpen)}
+          className="flex w-full items-center justify-between px-4 py-3 text-sm font-medium transition hover:bg-accent/30"
+        >
+          <span>
+            Tell ZITA more{" "}
+            <span className="font-normal text-muted-foreground">(optional)</span>
+          </span>
+          <ChevronDown className={cn("h-4 w-4 text-muted-foreground transition-transform", moreOpen && "rotate-180")} />
+        </button>
+        {moreOpen && (
+          <div className="space-y-4 border-t border-border px-4 py-4">
+            <Field label="What do you do?">
+              <Textarea rows={2} value={form.expertise} onChange={(e) => setForm({ ...form, expertise: e.target.value })} placeholder="Your expertise / background" />
+            </Field>
+            <Field label="Who do you help?">
+              <Input value={form.audience} onChange={(e) => setForm({ ...form, audience: e.target.value })} placeholder="Target audience" />
+            </Field>
+            <Field label="What do you sell or want to sell?">
+              <Textarea rows={2} value={form.offer} onChange={(e) => setForm({ ...form, offer: e.target.value })} placeholder="Your current or planned offer" />
+            </Field>
+            <Field label="Problem area or niche of interest">
+              <Input value={form.topic} onChange={(e) => setForm({ ...form, topic: e.target.value })} placeholder="e.g. freelancers, e-commerce, productivity…" />
+            </Field>
+          </div>
+        )}
+      </div>
+
+      <div className="flex flex-wrap items-center gap-3">
+        <Button onClick={handleSave} disabled={saving} className="bg-gradient-electric text-primary-foreground shadow-glow">
+          {saving && <Loader2 className="h-4 w-4 animate-spin" />}
+          Save & Continue <ArrowRight className="h-4 w-4" />
+        </Button>
+        <Button variant="ghost" onClick={handleSkip} disabled={saving} className="text-muted-foreground hover:text-foreground">
+          Skip to ideas
+        </Button>
+      </div>
+    </div>
   );
 }
 
@@ -267,29 +331,69 @@ function RadioGroup({ label, value, options, onChange }: { label: string; value:
 }
 
 // ---------- Step 2: Discover ----------
+const RESEARCH_PROMPT = `You are a market research assistant. I am looking for real, painful problems people have in a specific niche so I can build a simple app or tool to solve one.
+
+NICHE / TOPIC: [describe your niche or topic here]
+
+Search your knowledge of Reddit threads, YouTube comments, forums, and online communities related to this niche. Surface the real frustrations, recurring complaints, repeated questions, and "I wish there was a tool for this" moments.
+
+Give me:
+1. The top 10 recurring pain points people mention
+2. For each, a direct example of how people phrase it in their own words
+3. Where it shows up (which subreddit, type of video, forum)
+4. How often it comes up (very common, common, or occasional)
+
+Focus on problems that come up repeatedly, cause real frustration or wasted time, and could be solved by a simple web tool, calculator, tracker, planner, or assistant. Avoid generic observations. Give me the specific, raw complaints in people's own words. Output as a clean list I can copy.`;
+
+const MODE_CARDS = [
+  {
+    key: "fast" as const,
+    title: "⚡ Fast AI Mode",
+    desc: "ZITA generates ideas from your profile and AI reasoning. Fastest way to start. No research needed. Good for a first pass.",
+  },
+  {
+    key: "research" as const,
+    title: "📋 Research Mode",
+    desc: "Paste real data from Reddit, YouTube, or your customers. ZITA grounds ideas in actual demand, not guesses. Better quality. Takes about 10 minutes.",
+  },
+];
+
 function DiscoverPanel({ project, onSaved }: { project: any; onSaved: (next: Status) => void }) {
   const existingIdeas = (project.ideas as Idea[] | null) ?? null;
   const autoRun = !existingIdeas;
   const didAutoRun = useRef(false);
 
-  const [mode, setMode] = useState<"fast" | "manual">("fast");
+  const [mode, setMode] = useState<"fast" | "research">("fast");
   const [notes, setNotes] = useState<string>(project.manual_research ?? "");
   const [running, setRunning] = useState(autoRun);
   const [ideas, setIdeas] = useState<Idea[] | null>(existingIdeas);
   const [expanded, setExpanded] = useState<number | null>(null);
+  const [discoverError, setDiscoverError] = useState<string | null>(null);
 
   const run = async (isRegen = false) => {
     setRunning(true);
+    setDiscoverError(null);
     try {
       const { data, error } = await supabase.functions.invoke("generate-ideas", {
-        body: { projectId: project.id, researchNotes: notes },
+        body: { projectId: project.id, researchNotes: mode === "research" ? notes : "" },
       });
-      if (error) throw new Error(error.message);
+      if (error) {
+        let msg = error.message ?? "Generation failed — try again.";
+        try {
+          const body = await (error as any).context?.json?.();
+          if (body?.error) msg = body.error;
+        } catch {}
+        throw new Error(msg);
+      }
       if (data?.error) throw new Error(data.error);
+      if (!Array.isArray(data?.ideas)) throw new Error("Unexpected response — try again.");
       setIdeas(data.ideas);
       toast.success(isRegen ? "Ideas regenerated!" : `${data.ideas.length} ideas generated!`);
     } catch (err: any) {
-      toast.error(err?.message ?? "Generation failed — try again.");
+      const msg = err?.message ?? "Generation failed — try again.";
+      console.error("generate-ideas error:", err);
+      setDiscoverError(msg);
+      toast.error(msg);
     } finally {
       setRunning(false);
     }
@@ -301,6 +405,9 @@ function DiscoverPanel({ project, onSaved }: { project: any; onSaved: (next: Sta
       run();
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const copyPrompt = () =>
+    navigator.clipboard.writeText(RESEARCH_PROMPT).then(() => toast.success("Research prompt copied!"));
 
   const goToScore = async () => {
     if (["profile", "discover"].includes(project.status as string)) {
@@ -324,50 +431,81 @@ function DiscoverPanel({ project, onSaved }: { project: any; onSaved: (next: Sta
         {ideas && !running && (
           <Button variant="outline" size="sm" onClick={() => run(true)} disabled={running}>
             <RefreshCw className="h-3.5 w-3.5" />
-            Regenerate
+            Regenerate (8 credits)
           </Button>
         )}
       </div>
 
-      {/* Mode toggle */}
-      <div className="flex w-fit gap-1 rounded-lg border border-border bg-muted/30 p-1">
-        {(["fast", "manual"] as const).map((m) => (
-          <button
-            key={m}
-            type="button"
-            onClick={() => setMode(m)}
-            className={cn(
-              "rounded-md px-3 py-1.5 text-sm font-medium transition",
-              mode === m
-                ? "bg-card text-foreground shadow-sm"
-                : "text-muted-foreground hover:text-foreground",
-            )}
-          >
-            {m === "fast" ? "⚡ Fast AI Mode" : "📋 Manual Research Mode"}
-          </button>
-        ))}
-      </div>
-
-      {/* Research notes */}
-      <Field label="Research notes (optional)">
-        <Textarea
-          rows={4}
-          value={notes}
-          onChange={(e) => setNotes(e.target.value)}
-          placeholder="Paste notes from Reddit, YouTube comments, Facebook groups, customer calls, or emails…"
-          disabled={running}
-        />
-        <p className="mt-1 text-xs text-muted-foreground">
-          Live Reddit and YouTube research will be added later. For now, paste any research notes or use Fast AI Mode.
-        </p>
-      </Field>
-
-      {/* Primary CTA — shown only before first generation */}
+      {/* Mode cards — hidden once ideas are generated */}
       {!ideas && !running && (
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          {MODE_CARDS.map((m) => (
+            <button
+              key={m.key}
+              type="button"
+              onClick={() => setMode(m.key)}
+              className={cn(
+                "rounded-xl border-2 p-4 text-left transition",
+                mode === m.key
+                  ? "border-primary bg-primary/10"
+                  : "border-border bg-card hover:border-primary/40 hover:bg-accent/20",
+              )}
+            >
+              <div className="text-sm font-semibold">{m.title}</div>
+              <div className="mt-1 text-xs leading-relaxed text-muted-foreground">{m.desc}</div>
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Fast AI: single generate button */}
+      {!ideas && !running && mode === "fast" && (
         <Button onClick={() => run()} className="bg-gradient-electric text-primary-foreground shadow-glow">
           <Sparkles className="h-4 w-4" />
-          Discover Ideas (8 credits)
+          Generate Ideas (8 credits)
         </Button>
+      )}
+
+      {/* Research Mode: instructions → prompt → textarea → generate */}
+      {!ideas && !running && mode === "research" && (
+        <div className="space-y-4">
+          <div className="rounded-lg border border-border bg-muted/20 p-4 text-sm">
+            <p className="font-medium text-foreground">Don't have research yet?</p>
+            <ol className="ml-4 mt-2 list-decimal space-y-1 text-muted-foreground">
+              <li>Copy the prompt below</li>
+              <li>Run it in ChatGPT, Claude, or Gemini</li>
+              <li>Paste the results in the box below</li>
+            </ol>
+          </div>
+
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between">
+              <Label className="text-xs uppercase tracking-wider text-muted-foreground">Research prompt</Label>
+              <Button variant="ghost" size="sm" onClick={copyPrompt} className="h-7 gap-1.5 px-2 text-xs">
+                <Copy className="h-3 w-3" />
+                Copy prompt
+              </Button>
+            </div>
+            <div className="max-h-52 overflow-y-auto rounded-lg border border-border bg-muted/30 p-3 font-mono text-xs leading-relaxed text-muted-foreground whitespace-pre-wrap">
+              {RESEARCH_PROMPT}
+            </div>
+          </div>
+
+          <Field label="Paste your research results here">
+            <Textarea
+              rows={6}
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="Paste the AI research output here…"
+              disabled={running}
+            />
+          </Field>
+
+          <Button onClick={() => run()} className="bg-gradient-electric text-primary-foreground shadow-glow">
+            <Sparkles className="h-4 w-4" />
+            Generate Ideas (8 credits)
+          </Button>
+        </div>
       )}
 
       {/* Loading skeleton */}
@@ -381,6 +519,18 @@ function DiscoverPanel({ project, onSaved }: { project: any; onSaved: (next: Sta
               <div className="h-3 w-1/2 rounded bg-muted" />
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Error state */}
+      {discoverError && !running && (
+        <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-4">
+          <p className="text-sm font-medium text-destructive">Generation failed</p>
+          <p className="mt-1 text-sm text-muted-foreground">{discoverError}</p>
+          <Button variant="outline" size="sm" className="mt-3" onClick={() => run()}>
+            <RefreshCw className="h-3.5 w-3.5" />
+            Retry
+          </Button>
         </div>
       )}
 
