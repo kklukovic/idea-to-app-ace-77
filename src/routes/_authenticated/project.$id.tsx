@@ -401,12 +401,10 @@ const MODE_CARDS = [
 
 function DiscoverPanel({ project, onSaved }: { project: any; onSaved: (next: Status) => void }) {
   const existingIdeas = (project.ideas as Idea[] | null) ?? null;
-  const autoRun = !existingIdeas;
-  const didAutoRun = useRef(false);
 
   const [mode, setMode] = useState<"fast" | "research">("fast");
   const [notes, setNotes] = useState<string>(project.manual_research ?? "");
-  const [running, setRunning] = useState(autoRun);
+  const [running, setRunning] = useState(false);
   const [ideas, setIdeas] = useState<Idea[] | null>(existingIdeas);
   const [expanded, setExpanded] = useState<number | null>(null);
   const [discoverError, setDiscoverError] = useState<string | null>(null);
@@ -439,13 +437,6 @@ function DiscoverPanel({ project, onSaved }: { project: any; onSaved: (next: Sta
       setRunning(false);
     }
   };
-
-  useEffect(() => {
-    if (autoRun && !didAutoRun.current) {
-      didAutoRun.current = true;
-      run();
-    }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const copyPrompt = () =>
     navigator.clipboard.writeText(SUPER_IDEAS_PROMPT).then(() => toast.success("Prompt copied!"));
