@@ -2,6 +2,24 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const GEMINI_MODEL = "gemini-2.5-flash";
 const COST = 4;
+const SCORE_KEYS = [
+  "pain_level",
+  "build_ease",
+  "monetization_potential",
+  "content_potential",
+  "conversation_potential",
+  "founder_offer_potential",
+] as const;
+
+type ScoreKey = typeof SCORE_KEYS[number];
+
+type ScoredIdea = {
+  name: string;
+  scores: Record<ScoreKey, number>;
+  total: number;
+  verdict: string;
+  rank: number;
+};
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -81,6 +99,26 @@ Return ONLY a JSON array sorted by total descending, each: { name, scores: {pain
             temperature: 0.5,
             maxOutputTokens: 8192,
             responseMimeType: "application/json",
+            responseSchema: {
+              type: "array",
+              items: {
+                type: "object",
+                properties: {
+                  name: { type: "string" },
+                  scores: {
+                    type: "object",
+                    properties: Object.fromEntries(
+                      SCORE_KEYS.map((key) => [key, { type: "number" }]),
+                    ),
+                    required: [...SCORE_KEYS],
+                  },
+                  total: { type: "number" },
+                  verdict: { type: "string" },
+                  rank: { type: "number" },
+                },
+                required: ["name", "scores", "total", "verdict", "rank"],
+              },
+            },
           },
         }),
       },
@@ -97,17 +135,11 @@ Return ONLY a JSON array sorted by total descending, each: { name, scores: {pain
       geminiJson.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
 
     // 7. Parse JSON safely.
-    // responseMimeType:"application/json" is set, but Gemini occasionally still wraps
-    // output in ```json fences or adds leading text. The regex below extracts the
-    // content between any fences first; if no fences are found it uses the raw text.
-    let scored: Array<{ name: string; total: number }>;
+    // responseMimeType/responseSchema are set, but providers can still return
+    // fenced JSON, an object wrapper, or number strings. Normalize before saving.
+    let scored: ScoredIdea[];
     try {
-      const fenced = rawText.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
-      const toParse = (fenced ? fenced[1] : rawText).trim();
-      if (!toParse) throw new Error("empty response");
-      const parsed = JSON.parse(toParse);
-      if (!Array.isArray(parsed)) throw new Error("not an array");
-      scored = parsed;
+      scored = normalizeScoredIdeas(parseJsonFromModel(rawText));
     } catch (parseErr) {
       console.error("JSON parse failed:", parseErr, "| Raw (first 500):", rawText.slice(0, 500));
       return fail("AI returned invalid JSON — try again.", 502);
@@ -115,6 +147,7 @@ Return ONLY a JSON array sorted by total descending, each: { name, scores: {pain
 
     // Ensure sort order even if Gemini didn't comply
     scored.sort((a, b) => b.total - a.total);
+    scored = scored.map((idea, index) => ({ ...idea, rank: index + 1 }));
 
     // 8. Deduct credits (only reached on successful parse)
     const { error: deductErr } = await admin
@@ -159,5 +192,109 @@ function fail(message: string, status: number) {
   return new Response(JSON.stringify({ error: message }), {
     status,
     headers: { ...cors, "Content-Type": "application/json" },
+  });
+}
+
+function parseJsonFromModel(rawText: string): unknown {
+  const text = rawText.trim();
+  if (!text) throw new Error("empty response");
+
+  const fenced = text.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
+  if (fenced) return JSON.parse(fenced[1].trim());
+
+  try {
+    return JSON.parse(text);
+  } catch {
+    const extracted = extractFirstJsonValue(text);
+    if (!extracted) throw new Error("no JSON value found");
+    return JSON.parse(extracted);
+  }
+}
+
+function extractFirstJsonValue(text: string): string | null {
+  const start = text.search(/[\[{]/);
+  if (start === -1) return null;
+
+  const opener = text[start];
+  const closer = opener === "[" ? "]" : "}";
+  let depth = 0;
+  let inString = false;
+  let escaped = false;
+
+  for (let i = start; i < text.length; i++) {
+    const char = text[i];
+
+    if (inString) {
+      if (escaped) {
+        escaped = false;
+      } else if (char === "\\") {
+        escaped = true;
+      } else if (char === '"') {
+        inString = false;
+      }
+      continue;
+    }
+
+    if (char === '"') {
+      inString = true;
+    } else if (char === opener) {
+      depth++;
+    } else if (char === closer) {
+      depth--;
+      if (depth === 0) return text.slice(start, i + 1);
+    }
+  }
+
+  return null;
+}
+
+function normalizeScoredIdeas(value: unknown): ScoredIdea[] {
+  const maybeWrapped = value as { scored?: unknown; ideas?: unknown };
+  const list = Array.isArray(value)
+    ? value
+    : Array.isArray(maybeWrapped?.scored)
+      ? maybeWrapped.scored
+      : Array.isArray(maybeWrapped?.ideas)
+        ? maybeWrapped.ideas
+        : null;
+
+  if (!list) throw new Error("not an array");
+
+  return list.map((item, index) => {
+    const idea = item as {
+      name?: unknown;
+      scores?: Partial<Record<ScoreKey, unknown>>;
+      total?: unknown;
+      verdict?: unknown;
+      rank?: unknown;
+    };
+
+    if (typeof idea.name !== "string" || !idea.name.trim()) {
+      throw new Error(`idea ${index + 1} missing name`);
+    }
+    if (!idea.scores || typeof idea.scores !== "object") {
+      throw new Error(`idea ${idea.name} missing scores`);
+    }
+
+    const scores = Object.fromEntries(
+      SCORE_KEYS.map((key) => {
+        const score = Number(idea.scores?.[key]);
+        if (!Number.isFinite(score)) throw new Error(`idea ${idea.name} missing ${key}`);
+        return [key, Math.max(1, Math.min(10, Math.round(score)))];
+      }),
+    ) as Record<ScoreKey, number>;
+
+    const calculatedTotal = SCORE_KEYS.reduce((sum, key) => sum + scores[key], 0);
+    const suppliedTotal = Number(idea.total);
+
+    return {
+      name: idea.name.trim(),
+      scores,
+      total: Number.isFinite(suppliedTotal) ? suppliedTotal : calculatedTotal,
+      verdict: typeof idea.verdict === "string" && idea.verdict.trim()
+        ? idea.verdict.trim()
+        : "Needs more validation.",
+      rank: Number.isFinite(Number(idea.rank)) ? Number(idea.rank) : index + 1,
+    };
   });
 }
