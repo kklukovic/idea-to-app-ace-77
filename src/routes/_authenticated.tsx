@@ -46,10 +46,8 @@ function AuthedLayout() {
   return (
     <div className="flex min-h-screen">
       <aside className="hidden w-64 shrink-0 flex-col border-r border-sidebar-border bg-sidebar md:flex">
-        <Link to="/dashboard" className="flex items-center gap-2 px-5 py-5">
-          <div className="grid h-8 w-8 place-items-center rounded-lg bg-gradient-electric shadow-glow">
-            <span className="text-sm font-bold text-primary-foreground">Z</span>
-          </div>
+        <Link to="/dashboard" className="flex items-center gap-2.5 px-5 py-5">
+          <img src="/brand/app_icon_512.png" alt="ZITA OS" className="h-7 w-7 rounded-lg" />
           <span className="text-lg font-bold tracking-tight text-sidebar-foreground">ZITA OS</span>
         </Link>
         <div className="px-3">
@@ -91,7 +89,7 @@ function AuthedLayout() {
       <main className="flex-1 overflow-x-hidden">
         <div className="md:hidden sticky top-0 z-40 flex items-center justify-between border-b border-border bg-background/80 px-4 py-3 backdrop-blur">
           <Link to="/dashboard" className="flex items-center gap-2">
-            <div className="grid h-7 w-7 place-items-center rounded-md bg-gradient-electric"><span className="text-xs font-bold text-primary-foreground">Z</span></div>
+            <img src="/brand/app_icon_512.png" alt="ZITA OS" className="h-7 w-7 rounded-md" />
             <span className="font-bold">ZITA OS</span>
           </Link>
           <div className="flex items-center gap-1 text-xs"><Coins className="h-3 w-3 text-primary" /><span className="font-mono">{profile?.credits ?? "—"}</span></div>

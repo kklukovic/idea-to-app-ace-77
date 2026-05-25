@@ -30,11 +30,17 @@ function Landing() {
     <div className="min-h-screen">
       <header className="sticky top-0 z-50 glass">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
-          <Link to="/" className="flex items-center gap-2">
-            <div className="grid h-8 w-8 place-items-center rounded-lg bg-gradient-electric shadow-glow">
-              <span className="text-sm font-bold text-primary-foreground">Z</span>
-            </div>
-            <span className="text-lg font-bold tracking-tight">ZITA OS</span>
+          <Link to="/" className="flex items-center">
+            <img
+              src="/brand/horizontal_transparent.png"
+              alt="ZITA OS"
+              className="hidden h-8 w-auto sm:block"
+            />
+            <img
+              src="/brand/app_icon_512.png"
+              alt="ZITA OS"
+              className="block h-7 w-7 rounded-lg sm:hidden"
+            />
           </Link>
           <div className="flex items-center gap-2">
             <Link to="/auth" className="text-sm text-muted-foreground hover:text-foreground">Sign in</Link>
