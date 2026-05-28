@@ -8,6 +8,13 @@ import { supabase } from "@/integrations/supabase/client";
 
 const CTA_URL = "https://earnmoon.thrivecart.com/zita-os-founder-access/";
 
+const amberGradient: React.CSSProperties = {
+  background: "linear-gradient(135deg, #F5A623 0%, #FFD166 100%)",
+  WebkitBackgroundClip: "text",
+  WebkitTextFillColor: "transparent",
+  backgroundClip: "text",
+};
+
 export const Route = createFileRoute("/")({
   beforeLoad: async () => {
     const { data } = await supabase.auth.getSession();
@@ -135,7 +142,7 @@ function CtaButton({ label = "Get Founder Access - $97", large = false }: { labe
       href={CTA_URL}
       target="_blank"
       rel="noopener noreferrer"
-      className={`inline-flex items-center gap-2 rounded-md bg-gradient-electric text-primary-foreground shadow-glow hover:opacity-90 transition-opacity font-semibold ${large ? "px-8 py-4 text-base" : "px-6 py-3 text-sm"}`}
+      className={`inline-flex items-center gap-2 rounded-[6px] bg-[#F5A623] text-[#0D0D0D] font-bold hover:bg-[#E09520] transition-colors ${large ? "px-8 py-4 text-base" : "px-6 py-3 text-sm"}`}
     >
       {label} <ArrowRight className="h-4 w-4" />
     </a>
@@ -144,10 +151,10 @@ function CtaButton({ label = "Get Founder Access - $97", large = false }: { labe
 
 function Landing() {
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen bg-[#0D0D0D] text-[#D4D4D4]">
 
       {/* NAVBAR */}
-      <header className="sticky top-0 z-50 glass">
+      <header className="sticky top-0 z-50 bg-[#0D0D0D] border-b border-[#2A2A2A]">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
           <Link to="/" className="flex items-center">
             <img src="/brand/horizontal_transparent.png" alt="ZITA OS" className="hidden h-8 w-auto sm:block" />
@@ -157,7 +164,7 @@ function Landing() {
             href={CTA_URL}
             target="_blank"
             rel="noopener noreferrer"
-            className="rounded-md bg-gradient-electric px-4 py-2 text-sm font-medium text-primary-foreground shadow-glow hover:opacity-90 transition-opacity"
+            className="rounded-[6px] bg-[#F5A623] px-4 py-2 text-sm font-bold text-[#0D0D0D] hover:bg-[#E09520] transition-colors"
           >
             Get Founder Access - $97
           </a>
@@ -166,29 +173,37 @@ function Landing() {
 
       {/* HERO */}
       <section className="mx-auto max-w-5xl px-6 pt-24 pb-16 text-center">
-        <div className="inline-flex items-center rounded-full border border-border bg-card/50 px-3 py-1 text-xs text-muted-foreground">
+        <div
+          className="inline-flex items-center rounded-full px-3 py-1 text-xs font-medium text-[#F5A623]"
+          style={{ background: "rgba(245,166,35,0.12)", border: "1px solid rgba(245,166,35,0.3)" }}
+        >
           Founder Access - One Time $97
         </div>
-        <h1 className="mt-6 text-4xl font-bold tracking-tight md:text-6xl leading-tight">
+        <h1
+          className="mt-6 text-4xl font-black text-white md:text-6xl leading-tight"
+          style={{ letterSpacing: "-0.02em" }}
+        >
           Building an app is now the easy part.<br />
-          <span className="text-gradient-electric">Building one people actually buy</span><br />
+          <span style={amberGradient}>Building one people actually buy</span><br />
           is where everyone fails.
         </h1>
-        <p className="mx-auto mt-6 max-w-2xl text-lg text-muted-foreground">
+        <p className="mx-auto mt-6 max-w-2xl text-lg text-[#D4D4D4]">
           ZITA OS is a guided 5-step system that takes you from zero idea to a validated, blueprinted, launch-ready app in one sitting. No guessing. No wasted builds. No dev bills.
         </p>
         <div className="mt-8 flex flex-col items-center gap-3">
           <CtaButton label="Get Instant Access - $97" large />
-          <p className="text-xs text-muted-foreground">One-time payment. Lifetime access. No subscription.</p>
+          <p className="text-xs text-[#707070]">One-time payment. Lifetime access. No subscription.</p>
         </div>
       </section>
 
       {/* BEFORE / AFTER */}
       <section className="mx-auto max-w-6xl px-6 py-16">
-        <h2 className="text-center text-3xl font-bold tracking-tight">The way app building used to work vs. now</h2>
+        <h2 className="text-center text-3xl font-extrabold uppercase tracking-[0.05em] text-white">
+          The way app building used to work vs. now
+        </h2>
         <div className="mt-10 grid gap-6 md:grid-cols-2">
-          <div className="rounded-xl border border-red-900/50 bg-red-950/20 p-7">
-            <div className="mb-5 text-xs font-semibold uppercase tracking-widest text-red-400">Before</div>
+          <div className="rounded-[8px] border border-[#FF4444]/30 bg-[#FF4444]/5 p-7">
+            <div className="mb-5 text-xs font-bold uppercase tracking-widest text-[#FF4444]">Before</div>
             <ul className="space-y-4">
               {[
                 "Hiring a developer: $5,000-$50,000 minimum",
@@ -197,15 +212,15 @@ function Landing() {
                 "Launching something nobody wanted",
                 "Going back to zero",
               ].map((item) => (
-                <li key={item} className="flex items-start gap-3 text-sm text-muted-foreground">
-                  <X className="mt-0.5 h-4 w-4 shrink-0 text-red-400" />
+                <li key={item} className="flex items-start gap-3 text-sm text-[#707070]">
+                  <X className="mt-0.5 h-4 w-4 shrink-0 text-[#FF4444]" />
                   {item}
                 </li>
               ))}
             </ul>
           </div>
-          <div className="rounded-xl border border-primary/30 bg-primary/5 p-7">
-            <div className="mb-5 text-xs font-semibold uppercase tracking-widest text-primary">After ZITA OS</div>
+          <div className="rounded-[8px] border border-[#F5A623]/30 bg-[#F5A623]/5 p-7">
+            <div className="mb-5 text-xs font-bold uppercase tracking-widest text-[#F5A623]">After ZITA OS</div>
             <ul className="space-y-4">
               {[
                 "First working version in hours, not months",
@@ -214,8 +229,8 @@ function Landing() {
                 "Launch plan included from day one",
                 "Built to sell, not just to exist",
               ].map((item) => (
-                <li key={item} className="flex items-start gap-3 text-sm">
-                  <Check className="mt-0.5 h-4 w-4 shrink-0 text-success" />
+                <li key={item} className="flex items-start gap-3 text-sm text-[#D4D4D4]">
+                  <Check className="mt-0.5 h-4 w-4 shrink-0 text-[#F5A623]" />
                   {item}
                 </li>
               ))}
@@ -226,18 +241,21 @@ function Landing() {
 
       {/* WHAT WILL YOU BUILD */}
       <section className="mx-auto max-w-6xl px-6 py-16">
-        <h2 className="text-center text-3xl font-bold tracking-tight">What will you build?</h2>
-        <p className="mx-auto mt-3 max-w-2xl text-center text-sm text-muted-foreground">
+        <h2 className="text-center text-3xl font-extrabold uppercase tracking-[0.05em] text-white">What will you build?</h2>
+        <p className="mx-auto mt-3 max-w-2xl text-center text-sm text-[#707070]">
           ZITA OS works for any solo builder, consultant, or entrepreneur. Here are the most common apps our users build:
         </p>
         <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {appTypes.map((type) => (
-            <div key={type.title} className="rounded-xl border border-border bg-card p-6 shadow-card">
-              <div className="grid h-10 w-10 place-items-center rounded-lg bg-accent">
-                <type.icon className="h-5 w-5 text-primary" />
+            <div
+              key={type.title}
+              className="rounded-[8px] border border-[#2A2A2A] bg-[#161616] p-6 transition-all duration-200 hover:border-[#F5A623] hover:shadow-[0_0_20px_rgba(245,166,35,0.08)]"
+            >
+              <div className="grid h-10 w-10 place-items-center rounded-[6px] bg-[#1E1E1E]">
+                <type.icon className="h-5 w-5 text-[#F5A623]" />
               </div>
-              <div className="mt-4 font-semibold">{type.title}</div>
-              <p className="mt-2 text-sm text-muted-foreground leading-relaxed">{type.text}</p>
+              <div className="mt-4 font-bold text-white">{type.title}</div>
+              <p className="mt-2 text-sm text-[#707070] leading-relaxed">{type.text}</p>
             </div>
           ))}
         </div>
@@ -245,16 +263,18 @@ function Landing() {
 
       {/* CORE MESSAGE */}
       <section className="mx-auto max-w-4xl px-6 py-16">
-        <div className="rounded-2xl border border-border bg-card p-10">
-          <h2 className="text-2xl font-bold tracking-tight md:text-3xl leading-snug">
+        <div className="rounded-[8px] border border-[#2A2A2A] bg-[#161616] p-10">
+          <h2
+            className="text-2xl font-extrabold uppercase tracking-[0.05em] text-white md:text-3xl leading-snug"
+          >
             The market is flooded with apps nobody needs.<br />
-            <span className="text-gradient-electric">ZITA makes sure yours isn't one of them.</span>
+            <span style={amberGradient}>ZITA makes sure yours isn't one of them.</span>
           </h2>
-          <div className="mt-6 space-y-4 text-sm text-muted-foreground leading-relaxed">
+          <div className="mt-6 space-y-4 text-sm text-[#707070] leading-relaxed">
             <p>
               AI tools like Lovable, Cursor, and Claude have made building apps accessible to everyone. That's great news. And a serious problem.
             </p>
-            <p className="font-medium text-foreground">
+            <p className="font-semibold text-[#D4D4D4]">
               Everyone is building. Few are selling.
             </p>
             <p>
@@ -269,21 +289,24 @@ function Landing() {
 
       {/* FIVE STEPS */}
       <section className="mx-auto max-w-6xl px-6 py-16">
-        <h2 className="text-center text-3xl font-bold tracking-tight">Five steps. One sitting.</h2>
-        <p className="mx-auto mt-3 max-w-xl text-center text-sm text-muted-foreground">
+        <h2 className="text-center text-3xl font-extrabold uppercase tracking-[0.05em] text-white">Five steps. One sitting.</h2>
+        <p className="mx-auto mt-3 max-w-xl text-center text-sm text-[#707070]">
           Each step builds on the last. You don't move forward until the previous step is solid.
         </p>
         <div className="mt-10 grid gap-4 md:grid-cols-5">
           {steps.map((s, i) => (
-            <div key={s.label} className="rounded-xl border border-border bg-card p-5 shadow-card">
+            <div
+              key={s.label}
+              className="rounded-[8px] border border-[#2A2A2A] bg-[#161616] p-5 transition-all duration-200 hover:border-[#F5A623] hover:shadow-[0_0_20px_rgba(245,166,35,0.08)]"
+            >
               <div className="flex items-center gap-2">
-                <div className="grid h-8 w-8 place-items-center rounded-lg bg-accent">
-                  <s.icon className="h-4 w-4 text-primary" />
+                <div className="grid h-8 w-8 place-items-center rounded-[6px] bg-[#1E1E1E]">
+                  <s.icon className="h-4 w-4 text-[#F5A623]" />
                 </div>
-                <span className="text-xs font-mono text-muted-foreground">0{i + 1}</span>
+                <span className="text-xs font-mono text-[#707070]">0{i + 1}</span>
               </div>
-              <div className="mt-3 font-semibold">{s.label}</div>
-              <p className="mt-1 text-xs text-muted-foreground leading-relaxed">{s.desc}</p>
+              <div className="mt-3 font-bold text-white">{s.label}</div>
+              <p className="mt-1 text-xs text-[#707070] leading-relaxed">{s.desc}</p>
             </div>
           ))}
         </div>
@@ -291,11 +314,11 @@ function Landing() {
 
       {/* LAUNCH SECTION */}
       <section className="mx-auto max-w-4xl px-6 py-16 text-center">
-        <h2 className="text-3xl font-bold tracking-tight leading-snug">
+        <h2 className="text-3xl font-extrabold uppercase tracking-[0.05em] text-white leading-snug">
           Most tools stop at "build it."<br />
-          <span className="text-gradient-electric">We don't.</span>
+          <span style={amberGradient}>We don't.</span>
         </h2>
-        <div className="mx-auto mt-6 max-w-2xl space-y-4 text-sm text-muted-foreground leading-relaxed">
+        <div className="mx-auto mt-6 max-w-2xl space-y-4 text-sm text-[#707070] leading-relaxed">
           <p>
             Every project inside ZITA OS ends with a full launch system. Posts. DMs. Offer structure. Pricing suggestions. A 7-day action plan.
           </p>
@@ -310,22 +333,22 @@ function Landing() {
       <section className="mx-auto max-w-4xl px-6 py-16">
         <div className="grid gap-10 md:grid-cols-2">
           <div>
-            <h2 className="text-xl font-bold tracking-tight">ZITA OS is for you if...</h2>
+            <h2 className="text-xl font-extrabold uppercase tracking-[0.05em] text-white">ZITA OS is for you if...</h2>
             <ul className="mt-6 space-y-3">
               {forYou.map((item) => (
-                <li key={item} className="flex items-start gap-3 text-sm">
-                  <Check className="mt-0.5 h-4 w-4 shrink-0 text-success" />
+                <li key={item} className="flex items-start gap-3 text-sm text-[#D4D4D4]">
+                  <Check className="mt-0.5 h-4 w-4 shrink-0 text-[#F5A623]" />
                   {item}
                 </li>
               ))}
             </ul>
           </div>
           <div>
-            <h2 className="text-xl font-bold tracking-tight">ZITA OS is NOT for you if...</h2>
+            <h2 className="text-xl font-extrabold uppercase tracking-[0.05em] text-white">ZITA OS is NOT for you if...</h2>
             <ul className="mt-6 space-y-3">
               {notForYou.map((item) => (
-                <li key={item} className="flex items-start gap-3 text-sm text-muted-foreground">
-                  <X className="mt-0.5 h-4 w-4 shrink-0 text-red-400" />
+                <li key={item} className="flex items-start gap-3 text-sm text-[#707070]">
+                  <X className="mt-0.5 h-4 w-4 shrink-0 text-[#FF4444]" />
                   {item}
                 </li>
               ))}
@@ -336,17 +359,20 @@ function Landing() {
 
       {/* PRICING */}
       <section className="mx-auto max-w-3xl px-6 py-16">
-        <div className="rounded-2xl border border-primary/30 bg-gradient-to-br from-card to-accent/30 p-10 text-center shadow-glow">
-          <div className="text-xs uppercase tracking-widest text-primary">Founder Access</div>
+        <div
+          className="rounded-[8px] border border-[#F5A623]/30 bg-[#161616] p-10 text-center"
+          style={{ boxShadow: "0 0 40px rgba(245,166,35,0.07)" }}
+        >
+          <div className="text-xs font-bold uppercase tracking-widest text-[#F5A623]">Founder Access</div>
           <div className="mt-3 flex items-baseline justify-center gap-3">
-            <span className="text-5xl font-bold">$97</span>
-            <span className="text-xl text-muted-foreground line-through">$197</span>
-            <span className="text-sm text-muted-foreground">one-time</span>
+            <span className="text-5xl font-black text-white">$97</span>
+            <span className="text-xl text-[#707070] line-through">$197</span>
+            <span className="text-sm text-[#707070]">one-time</span>
           </div>
           <ul className="mx-auto mt-8 max-w-sm space-y-3 text-left text-sm">
             {features.map((f) => (
-              <li key={f} className="flex items-start gap-2">
-                <Check className="mt-0.5 h-4 w-4 shrink-0 text-success" />
+              <li key={f} className="flex items-start gap-2 text-[#D4D4D4]">
+                <Check className="mt-0.5 h-4 w-4 shrink-0 text-[#F5A623]" />
                 <span>{f}</span>
               </li>
             ))}
@@ -354,7 +380,7 @@ function Landing() {
           <div className="mt-8">
             <CtaButton large />
           </div>
-          <p className="mt-3 text-xs text-muted-foreground">
+          <p className="mt-3 text-xs text-[#707070]">
             One-time payment. No subscription. Use a coupon code at checkout if you have one.
           </p>
         </div>
@@ -362,12 +388,15 @@ function Landing() {
 
       {/* FAQ */}
       <section className="mx-auto max-w-3xl px-6 py-16">
-        <h2 className="text-center text-3xl font-bold tracking-tight">FAQ</h2>
+        <h2 className="text-center text-3xl font-extrabold uppercase tracking-[0.05em] text-white">FAQ</h2>
         <div className="mt-8 space-y-4">
           {faqs.map((f) => (
-            <div key={f.q} className="rounded-xl border border-border bg-card p-5">
-              <div className="font-semibold">{f.q}</div>
-              <p className="mt-2 text-sm text-muted-foreground leading-relaxed">{f.a}</p>
+            <div
+              key={f.q}
+              className="rounded-[8px] border border-[#2A2A2A] bg-[#161616] p-5 transition-all duration-200 hover:border-[#F5A623] hover:shadow-[0_0_20px_rgba(245,166,35,0.08)]"
+            >
+              <div className="font-bold text-white">{f.q}</div>
+              <p className="mt-2 text-sm text-[#707070] leading-relaxed">{f.a}</p>
             </div>
           ))}
         </div>
@@ -375,20 +404,20 @@ function Landing() {
 
       {/* FINAL CTA */}
       <section className="mx-auto max-w-3xl px-6 py-16 text-center">
-        <h2 className="text-3xl font-bold tracking-tight">Ready to build something that earns?</h2>
-        <p className="mt-3 text-sm text-muted-foreground">
+        <h2 className="text-3xl font-extrabold uppercase tracking-[0.05em] text-white">Ready to build something that earns?</h2>
+        <p className="mt-3 text-sm text-[#707070]">
           Join founders who stopped guessing and started building with a system.
         </p>
         <div className="mt-8 flex flex-col items-center gap-3">
           <CtaButton label="Get Founder Access - $97" large />
-          <p className="text-xs text-muted-foreground">One-time payment. Lifetime access. No subscription.</p>
+          <p className="text-xs text-[#707070]">One-time payment. Lifetime access. No subscription.</p>
         </div>
       </section>
 
       {/* FOOTER */}
-      <footer className="border-t border-border py-10 text-center text-xs text-muted-foreground">
+      <footer className="border-t border-[#2A2A2A] py-10 text-center text-xs text-[#707070]">
         <div className="flex items-center justify-center gap-4 mb-2">
-          <Link to="/auth" className="hover:text-foreground transition-colors">Sign in</Link>
+          <Link to="/auth" className="hover:text-white transition-colors">Sign in</Link>
           <span>zitaos.com</span>
         </div>
         <div>ZITA OS - Zero Idea To App</div>
