@@ -144,10 +144,16 @@ function AuthPage() {
           </Button>
 
           <div className="mt-6 text-center text-sm text-muted-foreground">
-            {isSignup ? "Already have access? " : "New here? "}
-            <Link to="/auth" search={{ mode: isSignup ? "signin" : "signup" }} className="text-primary hover:underline">
-              {isSignup ? "Sign in" : "Claim founder access"}
-            </Link>
+            {isSignup ? "Already have access? " : "Don't have an account? "}
+            {isSignup ? (
+              <Link to="/auth" search={{ mode: "signin" }} className="text-primary hover:underline">
+                Sign in
+              </Link>
+            ) : (
+              <a href="https://earnmoon.thrivecart.com/zita-os-founder-access/" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                Join here
+              </a>
+            )}
           </div>
         </div>
       </div>
