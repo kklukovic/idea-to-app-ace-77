@@ -196,6 +196,29 @@ function Landing() {
         </div>
       </section>
 
+      {/* PAIN */}
+      <section className="mx-auto max-w-3xl px-6 py-16">
+        <h2 className="text-3xl font-extrabold uppercase tracking-[0.05em] text-white">
+          You're probably here because...
+        </h2>
+        <ul className="mt-8 space-y-4">
+          {[
+            "You have ideas but have no clue which one is actually worth building",
+            "You've already built something nobody paid for and you don't want to repeat that",
+            "You see people way less technical than you launching apps and charging for them",
+            "You've been \"figuring out where to start\" for months while others are shipping",
+            "You're spending money on AI tools but still staring at a blank page",
+            "You're afraid to build the wrong thing again and waste another 3 months",
+          ].map((item) => (
+            <li key={item} className="flex items-start gap-3 text-sm text-[#D4D4D4]">
+              <Check className="mt-0.5 h-4 w-4 shrink-0 text-[#F5A623]" />
+              {item}
+            </li>
+          ))}
+        </ul>
+        <p className="mt-8 text-base font-bold text-white">That stops here.</p>
+      </section>
+
       {/* BEFORE / AFTER */}
       <section className="mx-auto max-w-6xl px-6 py-16">
         <h2 className="text-center text-3xl font-extrabold uppercase tracking-[0.05em] text-white">
@@ -383,6 +406,70 @@ function Landing() {
           <p className="mt-3 text-xs text-[#707070]">
             One-time payment. No subscription. Use a coupon code at checkout if you have one.
           </p>
+        </div>
+      </section>
+
+      {/* GUARANTEE */}
+      <section className="mx-auto max-w-3xl px-6 py-16">
+        <div
+          className="rounded-[8px] border border-[#F5A623]/40 bg-[#1A1600] p-10"
+          style={{ boxShadow: "0 0 40px rgba(245,166,35,0.05)" }}
+        >
+          <div className="text-xs font-bold uppercase tracking-widest text-[#F5A623]">Risk-free</div>
+          <h2 className="mt-3 text-2xl font-extrabold uppercase tracking-[0.05em] text-white md:text-3xl">
+            The One Sitting Guarantee
+          </h2>
+          <div className="mt-6 space-y-4 text-sm text-[#D4D4D4] leading-relaxed">
+            <p>
+              Go through the full ZITA OS workflow. Complete all 5 steps. If you don't walk away with a validated app idea, a full blueprint, and a launch plan you can actually use — email me and I'll refund every cent.
+            </p>
+            <p>
+              No hoops. No questions. The only condition: you actually use it.
+            </p>
+          </div>
+          <p className="mt-6 text-sm font-semibold text-[#F5A623]">Kreso, Founder of ZITA OS</p>
+        </div>
+      </section>
+
+      {/* VALUE STACK */}
+      <section className="mx-auto max-w-3xl px-6 py-16">
+        <h2 className="text-center text-3xl font-extrabold uppercase tracking-[0.05em] text-white">
+          Everything included at founder pricing
+        </h2>
+        <div className="mt-8 rounded-[8px] border border-[#2A2A2A] bg-[#161616] overflow-hidden">
+          {[
+            { label: "Full 5-step ZITA OS workflow", value: "$197 value" },
+            { label: "AI-powered idea discovery (Fast Mode)", value: "$97 value" },
+            { label: "6-dimension scoring system", value: "$97 value" },
+            { label: "Full PRD + Lovable-ready build prompt", value: "$147 value" },
+            { label: "Complete launch system (posts, DMs, 7-day plan)", value: "$147 value" },
+            { label: "Growth Library and templates", value: "$97 value" },
+            { label: "All future features at founder price", value: "priceless" },
+          ].map((item, i, arr) => (
+            <div
+              key={item.label}
+              className={`flex items-center justify-between px-6 py-4 text-sm ${i < arr.length - 1 ? "border-b border-[#2A2A2A]" : ""}`}
+            >
+              <div className="flex items-center gap-3 text-[#D4D4D4]">
+                <Check className="h-4 w-4 shrink-0 text-[#F5A623]" />
+                {item.label}
+              </div>
+              <span className="shrink-0 pl-4 text-[#707070]">{item.value}</span>
+            </div>
+          ))}
+          <div className="border-t border-[#2A2A2A] bg-[#1A1A1A] px-6 py-5">
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-[#707070]">Total value</span>
+              <span className="text-[#707070] line-through">$782</span>
+            </div>
+            <div className="mt-1 flex items-center justify-between">
+              <span className="font-bold text-white">Founder price</span>
+              <span className="text-2xl font-black text-[#F5A623]">$97 <span className="text-sm font-normal text-[#707070]">one-time</span></span>
+            </div>
+          </div>
+        </div>
+        <div className="mt-6 flex justify-center">
+          <CtaButton large />
         </div>
       </section>
 
