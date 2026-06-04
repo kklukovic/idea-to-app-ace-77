@@ -89,17 +89,39 @@ Deno.serve(async (req: Request) => {
       maxTokens: 16384,
     });
 
-    // Parse JSON robustly — strip markdown fences if provider added them anyway
+    // Parse JSON robustly — strip markdown fences and any preamble/trailing text
     let ideas: unknown[];
     try {
-      const fenced = s2Result.text.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
-      const raw = (fenced ? fenced[1] : s2Result.text).trim();
-      if (!raw) throw new Error("empty");
+      let raw = s2Result.text.trim();
+
+      // 1. Strip markdown code fences if present
+      const fenced = raw.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
+      if (fenced) raw = fenced[1].trim();
+
+      // 2. Trim anything before the first { or [ and after the matching last } or ]
+      const firstObj = raw.indexOf("{");
+      const firstArr = raw.indexOf("[");
+      const candidates = [firstObj, firstArr].filter((i) => i >= 0);
+      if (candidates.length === 0) throw new Error("no JSON start token found");
+      const start = Math.min(...candidates);
+      const opener = raw[start];
+      const closer = opener === "[" ? "]" : "}";
+      const end = raw.lastIndexOf(closer);
+      if (end <= start) throw new Error("no JSON end token found");
+      raw = raw.slice(start, end + 1);
+
       const parsed = JSON.parse(raw);
       ideas = Array.isArray(parsed) ? parsed : parsed?.ideas;
       if (!Array.isArray(ideas)) throw new Error("not an array");
     } catch (e) {
-      console.error("JSON parse failed:", e, "| s2[:500]:", s2Result.text.slice(0, 500));
+      console.error(
+        "JSON parse failed:",
+        e instanceof Error ? e.message : String(e),
+        "| provider:", s2Result.provider,
+        "| model:", s2Result.model,
+        "| raw length:", s2Result.text.length,
+        "| FULL raw text:\n", s2Result.text,
+      );
       return fail("AI returned invalid JSON — try again.", 502);
     }
 

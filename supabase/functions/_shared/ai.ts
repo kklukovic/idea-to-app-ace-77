@@ -125,7 +125,16 @@ async function callAnthropic(opts: CallAIOpts): Promise<AIResult> {
 
   // Anthropic has no native jsonMode — enforce via system instruction
   const system = opts.jsonMode
-    ? `${opts.system}\n\nCRITICAL: Output ONLY valid JSON. No markdown fences, no prose, no explanation before or after.`
+    ? `${opts.system}
+
+CRITICAL OUTPUT RULES — NON-NEGOTIABLE:
+- Output ONLY raw JSON. Nothing else.
+- Do NOT wrap the JSON in markdown code fences (no \`\`\`json, no \`\`\`).
+- Do NOT include any preamble sentence like "Here is the JSON:" or "Sure, here's...".
+- Do NOT include any explanation, commentary, or trailing text after the JSON.
+- The FIRST character of your response MUST be { or [.
+- The LAST character of your response MUST be } or ].
+- Do not truncate. Close every bracket and brace.`
     : opts.system;
 
   // Clamp temperature to Anthropic's 0–1 range
