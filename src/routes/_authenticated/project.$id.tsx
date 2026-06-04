@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import {
   Target, Sparkles, Zap, FileCode, Rocket, Check, Lock, ArrowRight, Loader2,
-  RefreshCw, ChevronDown, Copy, Download,
+  RefreshCw, ChevronDown, Copy, Download, ExternalLink, AlertTriangle,
 } from "lucide-react";
 import { type Idea, type ScoredIdea } from "@/lib/zita.functions";
 import { cn } from "@/lib/utils";
@@ -331,97 +331,92 @@ function RadioGroup({ label, value, options, onChange }: { label: string; value:
 }
 
 // ---------- Step 2: Discover ----------
-const SUPER_IDEAS_PROMPT = `Before you run this:
-1. Fill in the three bracketed sections below (your niche, audience, background).
-2. Run it in ChatGPT, Claude, or Gemini with web search / browsing turned ON. Without web search the AI will guess instead of research.
-3. Paste the full output back into ZITA's Deep Research box.
 
----
+type DiscoverMode = "personalized" | "surprise" | "validate";
 
-You are a ruthless micro-SaaS strategist, market researcher, and product validator.
-
-Your job is not to give generic AI app ideas. Your job is to give 10 highly specific, realistic app ideas that fit the person below, their skills, their market, and the real problems their audience is actively trying to solve right now.
-
-ABOUT ME (edit these):
-- My niche / topic: [YOUR NICHE, e.g. make money online, health, weight loss, productivity]
-- My audience: [YOUR AUDIENCE, e.g. solopreneurs, coaches, affiliate marketers, small business owners]
-- My background and skills: [YOUR BACKGROUND, what you can build and what you know]
-
-MY PREFERENCES (edit if needed):
-- I want simple, useful, focused apps, not a complex startup
-- I like practical tools, content tools, lead-gen tools, workflow tools, simple business utilities
-- I want lean apps I can build and validate fast
-- I prefer tools that solve one painful problem clearly
-- I want low-ticket products, around $10 to $20 per month
-- I want products people use daily, weekly, or monthly with low churn
-- No bloated all-in-one tools, no generic "AI writer" unless there is a strong niche angle
-
-YOUR RESEARCH TASK:
-Research the biggest recurring, annoying, time-wasting, or revenue-blocking problems my audience discusses online. Focus on Reddit threads, niche communities, product review complaints, tool comparisons, "how do I" questions, "I hate that this tool" complaints, repetitive manual tasks, content bottlenecks, lead-gen bottlenecks, follow-up bottlenecks, planning and reporting frustrations, and tools that are too expensive or too complex for solo operators.
-
-I want ideas with: recurring need, habit loop, workflow lock-in, ongoing content or lead-gen or tracking need, data that accumulates over time, or convenience people will not want to lose.
-
-Do not give trendy nonsense, vague categories, ideas needing a big team or funding, or ideas people use once and abandon.
-
-FOR EACH OF THE 10 IDEAS, USE THIS STRUCTURE:
-1. App Name (clear, marketable)
-2. Core Problem (exact pain, who feels it most)
-3. Evidence From Market (specific complaints/patterns you found online)
-4. Why This Fits Me (based on the ABOUT ME section)
-5. Daily / Weekly / Monthly Use Case (why they return)
-6. Why People Would Keep Paying (what makes it sticky)
-7. Simplicity Score 1-10 (what the MVP includes and excludes)
-8. Pricing Fit ($10/$12/$15/$19 or low-ticket usage, with reasoning)
-9. Fast MVP Version (smallest useful build)
-10. Unique Angle (how it stands out)
-11. Churn Risk (why they might leave, how to prevent it)
-12. Validation Test (fastest way to validate before building)
-13. Market Score 1-10 for: pain level, willingness to pay, simplicity, retention, fit for audience, fit for me. Then a short verdict.
-
-AFTER ALL 10 IDEAS:
-1. Rank all 10 from best to worst for me
-2. Pick the top 3 to seriously consider, and for each: why it beats the others, who buys first, the easiest way to get the first 5 paying users
-3. Give 3 ideas that are sexy but likely to fail, 3 traps to avoid, and the single best idea for low churn and stable monthly revenue
-
-RULES:
-Be brutally honest. Think commercially, not creatively. Prefer boring but sticky over exciting but fragile. Prefer narrow tools with strong recurring use. Reject ideas that only sound good on paper. Use real-world logic. Output in a clean, structured format.`;
-
-const MODE_CARDS = [
+const DISCOVER_MODES: { key: DiscoverMode; title: string; desc: string }[] = [
   {
-    key: "fast" as const,
-    title: "⚡ Fast AI Mode",
-    desc: "Instant ideas from your niche and profile. Good first pass. May be more generic.",
+    key: "personalized",
+    title: "Personalized Ideas",
+    desc: "Researches ideas tailored to your niche, audience, and profile.",
   },
   {
-    key: "research" as const,
-    title: "📋 Deep Research Mode",
-    desc: "Run the SUPER IDEAS PROMPT with web search ON, paste the output. Ideas grounded in real market data — much higher signal.",
+    key: "surprise",
+    title: "Surprise Me",
+    desc: "Generates diverse random seeds, then searches for real market evidence.",
+  },
+  {
+    key: "validate",
+    title: "Validate My Idea",
+    desc: "Enter a rough idea — get stronger researched variants and adjacent angles.",
   },
 ];
 
-function DiscoverPanel({ project, onSaved }: { project: any; onSaved: (next: Status) => void }) {
-  const existingIdeas = (project.ideas as Idea[] | null) ?? null;
+const LOADING_STEPS = [
+  "Generating idea hypotheses...",
+  "Searching real discussions...",
+  "Reading what people actually want...",
+  "Scoring the evidence...",
+  "Building your idea cards...",
+];
 
-  const [mode, setMode] = useState<"fast" | "research">("fast");
-  const [notes, setNotes] = useState<string>(project.manual_research ?? "");
+type SourceLink = { url: string; title: string; platform: string; engagement?: string };
+
+type ResearchedIdea = {
+  name: string;
+  evidence_strength: "Strong" | "Medium" | "Weak";
+  target_audience: string;
+  core_problem: string;
+  evidence_summary: string;
+  source_links: SourceLink[];
+  strongest_signal: string;
+  why_fits_user: string;
+  usage_frequency: string;
+  why_people_keep_paying: string;
+  fast_mvp: string;
+  unique_angle: string;
+  churn_risk: string;
+  validation_test: string;
+  scores: { pain: number; willingness_to_pay: number; simplicity: number; retention: number; fit: number };
+  final_verdict: string;
+};
+
+function DiscoverPanel({ project, onSaved }: { project: any; onSaved: (next: Status) => void }) {
+  const rawIdeas = project.ideas as any[] | null;
+  const existingIdeas: ResearchedIdea[] | null =
+    rawIdeas && rawIdeas.length > 0 && typeof rawIdeas[0]?.evidence_strength === "string"
+      ? (rawIdeas as ResearchedIdea[])
+      : null;
+
+  const [mode, setMode] = useState<DiscoverMode>("personalized");
+  const [roughIdea, setRoughIdea] = useState("");
   const [running, setRunning] = useState(false);
-  const [ideas, setIdeas] = useState<Idea[] | null>(existingIdeas);
+  const [loadingStepIdx, setLoadingStepIdx] = useState(0);
+  const [ideas, setIdeas] = useState<ResearchedIdea[] | null>(existingIdeas);
   const [expanded, setExpanded] = useState<number | null>(null);
+  const [chosen, setChosen] = useState<string | null>(
+    (project.chosen_idea as any)?.name ?? null,
+  );
   const [discoverError, setDiscoverError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!running) { setLoadingStepIdx(0); return; }
+    const interval = setInterval(() => {
+      setLoadingStepIdx((i) => Math.min(i + 1, LOADING_STEPS.length - 1));
+    }, 14000);
+    return () => clearInterval(interval);
+  }, [running]);
 
   const run = async (isRegen = false) => {
     setRunning(true);
     setDiscoverError(null);
+    setLoadingStepIdx(0);
     try {
       const { data, error } = await supabase.functions.invoke("generate-ideas", {
-        body: {
-          projectId: project.id,
-          researchNotes: mode === "research" ? notes : "",
-          mode,
-        },
+        body: { projectId: project.id, mode, roughIdea: mode === "validate" ? roughIdea : "" },
       });
       if (error) {
-        let msg = error.message ?? "Generation failed — try again.";
+        let msg = error.message ?? "Research failed — try again.";
         try {
           const body = await (error as any).context?.json?.();
           if (body?.error) msg = body.error;
@@ -430,10 +425,10 @@ function DiscoverPanel({ project, onSaved }: { project: any; onSaved: (next: Sta
       }
       if (data?.error) throw new Error(data.error);
       if (!Array.isArray(data?.ideas)) throw new Error("Unexpected response — try again.");
-      setIdeas(data.ideas);
-      toast.success(isRegen ? "Ideas regenerated!" : `${data.ideas.length} ideas generated!`);
+      setIdeas(data.ideas as ResearchedIdea[]);
+      toast.success(isRegen ? "Ideas refreshed!" : `${data.ideas.length} researched ideas ready!`);
     } catch (err: any) {
-      const msg = err?.message ?? "Generation failed — try again.";
+      const msg = err?.message ?? "Research failed — try again.";
       console.error("generate-ideas error:", err);
       setDiscoverError(msg);
       toast.error(msg);
@@ -442,8 +437,16 @@ function DiscoverPanel({ project, onSaved }: { project: any; onSaved: (next: Sta
     }
   };
 
-  const copyPrompt = () =>
-    navigator.clipboard.writeText(SUPER_IDEAS_PROMPT).then(() => toast.success("Prompt copied!"));
+  const chooseIdea = async (idea: ResearchedIdea) => {
+    const { error } = await supabase
+      .from("projects")
+      .update({ chosen_idea: idea as never, status: "score", updated_at: new Date().toISOString() })
+      .eq("id", project.id);
+    if (error) { toast.error(error.message); return; }
+    setChosen(idea.name);
+    toast.success(`"${idea.name}" selected`);
+    onSaved("score");
+  };
 
   const goToScore = async () => {
     if (["profile", "discover"].includes(project.status as string)) {
@@ -462,119 +465,100 @@ function DiscoverPanel({ project, onSaved }: { project: any; onSaved: (next: Sta
       <div className="flex items-start justify-between gap-4">
         <div>
           <h2 className="text-lg font-semibold">Step 2 — Discover Ideas</h2>
-          <p className="mt-1 text-sm text-muted-foreground">Find real, painful problems worth solving.</p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            AI researches real online discussions to find ideas with evidence behind them.
+          </p>
         </div>
         {ideas && !running && (
           <Button variant="outline" size="sm" onClick={() => run(true)} disabled={running}>
             <RefreshCw className="h-3.5 w-3.5" />
-            Regenerate (8 credits)
+            Re-research (10 credits)
           </Button>
         )}
       </div>
 
-      {/* Mode cards — hidden once ideas are generated */}
+      {/* Mode selector */}
       {!ideas && !running && (
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          {MODE_CARDS.map((m) => (
-            <button
-              key={m.key}
-              type="button"
-              onClick={() => setMode(m.key)}
-              className={cn(
-                "rounded-xl border-2 p-4 text-left transition",
-                mode === m.key
-                  ? "border-primary bg-primary/10"
-                  : "border-border bg-card hover:border-primary/40 hover:bg-accent/20",
-              )}
-            >
-              <div className="text-sm font-semibold">{m.title}</div>
-              <div className="mt-1 text-xs leading-relaxed text-muted-foreground">{m.desc}</div>
-            </button>
-          ))}
-        </div>
-      )}
-
-      {/* Fast AI: single generate button */}
-      {!ideas && !running && mode === "fast" && (
-        <Button onClick={() => run()} className="bg-gradient-electric text-primary-foreground shadow-glow">
-          <Sparkles className="h-4 w-4" />
-          Generate Ideas (8 credits)
-        </Button>
-      )}
-
-      {/* Deep Research Mode: how-it-works → prompt → textarea → extract */}
-      {!ideas && !running && mode === "research" && (
-        <div className="space-y-5">
-          {/* How it works */}
-          <div className="rounded-xl border border-primary/20 bg-primary/5 p-5">
-            <p className="mb-4 text-sm font-semibold text-foreground">How Deep Research Mode works</p>
-            <ol className="space-y-3">
-              {[
-                "Copy the SUPER IDEAS PROMPT below",
-                "Edit the ABOUT ME section (and preferences if you want)",
-                "Paste it into ChatGPT, Claude, or Gemini with web search turned ON",
-                "You'll get 10 researched app ideas with full details",
-                "Copy ALL 10 ideas, paste them in the box below, then click Extract Ideas",
-                "ZITA structures and scores them so you can pick your winner",
-              ].map((step, i) => (
-                <li key={i} className="flex items-start gap-3">
-                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/20 text-xs font-bold text-primary">
-                    {i + 1}
-                  </span>
-                  <span className="text-sm leading-relaxed text-foreground/90">{step}</span>
-                </li>
-              ))}
-            </ol>
+        <>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+            {DISCOVER_MODES.map((m) => (
+              <button
+                key={m.key}
+                type="button"
+                onClick={() => setMode(m.key)}
+                className={cn(
+                  "rounded-xl border-2 p-4 text-left transition",
+                  mode === m.key
+                    ? "border-primary bg-primary/10"
+                    : "border-border bg-card hover:border-primary/40 hover:bg-accent/20",
+                )}
+              >
+                <div className="text-sm font-semibold">{m.title}</div>
+                <div className="mt-1 text-xs leading-relaxed text-muted-foreground">{m.desc}</div>
+              </button>
+            ))}
           </div>
 
-          <div className="space-y-1.5">
-            <div className="flex items-center justify-between">
-              <Label className="text-xs uppercase tracking-wider text-muted-foreground">SUPER IDEAS PROMPT</Label>
-              <Button variant="ghost" size="sm" onClick={copyPrompt} className="h-7 gap-1.5 px-2 text-xs">
-                <Copy className="h-3 w-3" />
-                Copy prompt
-              </Button>
-            </div>
-            <div className="max-h-52 overflow-y-auto rounded-lg border border-border bg-muted/30 p-3 font-mono text-xs leading-relaxed text-muted-foreground whitespace-pre-wrap">
-              {SUPER_IDEAS_PROMPT}
-            </div>
-          </div>
-
-          <Field label="Paste all 10 ideas from your AI tool here">
+          {mode === "validate" && (
             <Textarea
-              rows={6}
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              placeholder="Paste the full AI output here…"
-              disabled={running}
+              rows={3}
+              value={roughIdea}
+              onChange={(e) => setRoughIdea(e.target.value)}
+              placeholder="Describe your rough idea... e.g. 'A tool that helps freelancers track unpaid invoices'"
             />
-          </Field>
+          )}
 
-          <Button onClick={() => run()} className="bg-gradient-electric text-primary-foreground shadow-glow">
+          <Button
+            onClick={() => run()}
+            disabled={mode === "validate" && !roughIdea.trim()}
+            className="bg-gradient-electric text-primary-foreground shadow-glow"
+          >
             <Sparkles className="h-4 w-4" />
-            Extract Ideas (8 credits)
+            Research Ideas (10 credits)
           </Button>
-        </div>
+        </>
       )}
 
-      {/* Loading skeleton */}
+      {/* Sequential loading states */}
       {running && (
-        <div className="space-y-3">
-          <p className="animate-pulse text-sm text-muted-foreground">Generating ideas — this can take 15–30 s…</p>
-          {Array.from({ length: 5 }).map((_, i) => (
-            <div key={i} className="animate-pulse space-y-2 rounded-lg border border-border bg-muted/20 p-4">
-              <div className="h-4 w-1/3 rounded bg-muted" />
-              <div className="h-3 w-2/3 rounded bg-muted" />
-              <div className="h-3 w-1/2 rounded bg-muted" />
-            </div>
-          ))}
+        <div className="space-y-6 py-4">
+          <div className="space-y-4">
+            {LOADING_STEPS.map((step, i) => (
+              <div
+                key={i}
+                className={cn(
+                  "flex items-center gap-3 transition-opacity",
+                  i > loadingStepIdx && "opacity-25",
+                )}
+              >
+                {i < loadingStepIdx ? (
+                  <Check className="h-4 w-4 shrink-0 text-green-500" />
+                ) : i === loadingStepIdx ? (
+                  <Loader2 className="h-4 w-4 shrink-0 animate-spin text-primary" />
+                ) : (
+                  <div className="h-4 w-4 shrink-0 rounded-full border border-border" />
+                )}
+                <span
+                  className={cn(
+                    "text-sm",
+                    i === loadingStepIdx ? "font-medium text-foreground" : "text-muted-foreground",
+                  )}
+                >
+                  {step}
+                </span>
+              </div>
+            ))}
+          </div>
+          <p className="text-xs text-muted-foreground">
+            This can take 30–90 seconds — web research takes time.
+          </p>
         </div>
       )}
 
       {/* Error state */}
       {discoverError && !running && (
         <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-4">
-          <p className="text-sm font-medium text-destructive">Generation failed</p>
+          <p className="text-sm font-medium text-destructive">Research failed</p>
           <p className="mt-1 text-sm text-muted-foreground">{discoverError}</p>
           <Button variant="outline" size="sm" className="mt-3" onClick={() => run()}>
             <RefreshCw className="h-3.5 w-3.5" />
@@ -586,18 +570,25 @@ function DiscoverPanel({ project, onSaved }: { project: any; onSaved: (next: Sta
       {/* Ideas list */}
       {ideas && !running && (
         <div className="space-y-3">
-          <p className="text-xs uppercase tracking-wider text-muted-foreground">{ideas.length} ideas generated</p>
+          <p className="text-xs uppercase tracking-wider text-muted-foreground">
+            {ideas.length} ideas researched
+          </p>
           {ideas.map((idea, i) => (
-            <IdeaCard
+            <ResearchIdeaCard
               key={i}
               idea={idea}
               expanded={expanded === i}
+              isChosen={chosen === idea.name}
               onToggle={() => setExpanded(expanded === i ? null : i)}
+              onChoose={() => chooseIdea(idea)}
             />
           ))}
           <div className="border-t border-border pt-4">
-            <Button onClick={goToScore} className="bg-gradient-electric text-primary-foreground shadow-glow">
-              Score these Ideas <ArrowRight className="h-4 w-4" />
+            <Button
+              onClick={goToScore}
+              className="bg-gradient-electric text-primary-foreground shadow-glow"
+            >
+              Score All Ideas <ArrowRight className="h-4 w-4" />
             </Button>
           </div>
         </div>
@@ -606,38 +597,172 @@ function DiscoverPanel({ project, onSaved }: { project: any; onSaved: (next: Sta
   );
 }
 
-function IdeaCard({ idea, expanded, onToggle }: { idea: Idea; expanded: boolean; onToggle: () => void }) {
-  const diff = idea.build_difficulty_1_10;
-  const diffColor = diff <= 3 ? "text-green-500" : diff <= 6 ? "text-yellow-500" : "text-red-500";
+const EVIDENCE_STYLES: Record<string, string> = {
+  Strong: "border-green-500/40 bg-green-500/10 text-green-400",
+  Medium: "border-amber-500/40 bg-amber-500/10 text-amber-400",
+  Weak: "border-red-500/40 bg-red-500/10 text-red-400",
+};
+
+function ResearchIdeaCard({
+  idea,
+  expanded,
+  isChosen,
+  onToggle,
+  onChoose,
+}: {
+  idea: ResearchedIdea;
+  expanded: boolean;
+  isChosen: boolean;
+  onToggle: () => void;
+  onChoose: () => void;
+}) {
+  const strength = idea.evidence_strength ?? "Weak";
+  const isWeak = strength === "Weak";
+
   return (
-    <div className="overflow-hidden rounded-lg border border-border bg-card">
+    <div
+      className={cn(
+        "overflow-hidden rounded-lg border bg-card",
+        isChosen ? "border-primary" : isWeak ? "border-amber-500/20" : "border-border",
+      )}
+    >
       <button
         type="button"
         onClick={onToggle}
         className="flex w-full items-start gap-3 p-4 text-left transition hover:bg-accent/30"
       >
-        <div className="min-w-0 flex-1">
+        <div className="min-w-0 flex-1 space-y-1.5">
           <div className="flex flex-wrap items-center gap-2">
             <span className="font-semibold">{idea.name}</span>
+            <span
+              className={cn(
+                "rounded-md border px-2 py-0.5 text-xs font-semibold",
+                EVIDENCE_STYLES[strength] ?? EVIDENCE_STYLES.Weak,
+              )}
+            >
+              {strength}
+            </span>
             <span className="rounded-full border border-border px-2 py-0.5 text-xs text-muted-foreground">
               {idea.usage_frequency}
             </span>
-            <span className={cn("text-xs font-medium", diffColor)}>Difficulty {diff}/10</span>
+            {isChosen && (
+              <span className="flex items-center gap-1 text-xs text-primary">
+                <Check className="h-3 w-3" /> Chosen
+              </span>
+            )}
           </div>
-          <p className="mt-1 text-sm text-muted-foreground">{idea.promise}</p>
+          <p className="text-xs text-muted-foreground">{idea.target_audience}</p>
+          <p className="line-clamp-2 text-sm text-foreground/90">{idea.core_problem}</p>
+          {isWeak && (
+            <p className="flex items-center gap-1.5 text-xs text-amber-400">
+              <AlertTriangle className="h-3 w-3" />
+              Weak evidence — validate before building
+            </p>
+          )}
         </div>
         <ChevronDown
-          className={cn("mt-0.5 h-4 w-4 shrink-0 text-muted-foreground transition-transform", expanded && "rotate-180")}
+          className={cn(
+            "mt-0.5 h-4 w-4 shrink-0 text-muted-foreground transition-transform",
+            expanded && "rotate-180",
+          )}
         />
       </button>
+
       {expanded && (
-        <div className="space-y-3 border-t border-border px-4 py-4 text-sm">
-          <IdeaDetail label="The real problem" value={idea.problem} />
-          <IdeaDetail label="Evidence / reasoning" value={idea.evidence} />
-          <IdeaDetail label="Target user" value={idea.target_user} />
-          <IdeaDetail label="Why they care" value={idea.why_they_care} />
-          <IdeaDetail label="Monetization angle" value={idea.monetization_angle} />
-          <IdeaDetail label="Content angle" value={idea.content_angle} />
+        <div className="space-y-4 border-t border-border px-4 py-4 text-sm">
+          <IdeaDetail label="Evidence summary" value={idea.evidence_summary} />
+
+          {idea.source_links && idea.source_links.length > 0 && (
+            <div>
+              <span className="text-xs uppercase tracking-wider text-muted-foreground">Sources</span>
+              <div className="mt-2 space-y-1.5">
+                {idea.source_links.map((link, i) => (
+                  <a
+                    key={i}
+                    href={link.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-start gap-2 rounded-md border border-border bg-muted/20 px-3 py-2 text-xs transition-colors hover:bg-accent/30"
+                  >
+                    <ExternalLink className="mt-0.5 h-3 w-3 shrink-0 text-primary" />
+                    <div className="min-w-0">
+                      <span className="block truncate font-medium text-foreground">{link.title}</span>
+                      <span className="text-muted-foreground">
+                        {link.platform}
+                        {link.engagement ? ` · ${link.engagement}` : ""}
+                      </span>
+                    </div>
+                  </a>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <IdeaDetail label="Strongest signal" value={idea.strongest_signal} />
+          <IdeaDetail label="Why this fits you" value={idea.why_fits_user} />
+
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <IdeaDetail label="Why people keep paying" value={idea.why_people_keep_paying} />
+            <IdeaDetail label="Fast MVP version" value={idea.fast_mvp} />
+          </div>
+
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <IdeaDetail label="Unique angle" value={idea.unique_angle} />
+            <IdeaDetail label="Churn risk" value={idea.churn_risk} />
+          </div>
+
+          <IdeaDetail label="Validation test" value={idea.validation_test} />
+
+          {idea.scores && (
+            <div>
+              <span className="text-xs uppercase tracking-wider text-muted-foreground">
+                Scores (1–10)
+              </span>
+              <div className="mt-2 flex flex-wrap gap-4">
+                {(Object.entries(idea.scores) as [string, number][]).map(([key, val]) => (
+                  <div key={key} className="flex flex-col items-center gap-0.5">
+                    <span
+                      className={cn(
+                        "text-lg font-bold tabular-nums",
+                        val >= 8
+                          ? "text-green-500"
+                          : val >= 6
+                          ? "text-yellow-500"
+                          : "text-muted-foreground",
+                      )}
+                    >
+                      {val}
+                    </span>
+                    <span className="text-xs capitalize text-muted-foreground">
+                      {key.replace(/_/g, " ")}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div className="rounded-lg border border-border bg-muted/20 px-3 py-2.5">
+            <span className="text-xs uppercase tracking-wider text-muted-foreground">Verdict</span>
+            <p className="mt-1 font-medium text-foreground">{idea.final_verdict}</p>
+          </div>
+
+          <div className="border-t border-border pt-3">
+            <Button
+              size="sm"
+              variant={isChosen ? "default" : "outline"}
+              onClick={onChoose}
+              className={cn(
+                isChosen && "border-primary/30 bg-primary/20 text-primary hover:bg-primary/30",
+              )}
+            >
+              {isChosen ? (
+                <><Check className="h-3 w-3" /> Chosen</>
+              ) : (
+                "Choose this idea"
+              )}
+            </Button>
+          </div>
         </div>
       )}
     </div>

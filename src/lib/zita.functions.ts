@@ -5,15 +5,21 @@ import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
 export type Idea = {
   name: string;
-  promise: string;
-  problem: string;
-  evidence: string;
-  target_user: string;
-  why_they_care: string;
+  evidence_strength: "Strong" | "Medium" | "Weak";
+  target_audience: string;
+  core_problem: string;
+  evidence_summary: string;
+  source_links: Array<{ url: string; title: string; platform: string; engagement?: string }>;
+  strongest_signal: string;
+  why_fits_user: string;
   usage_frequency: string;
-  monetization_angle: string;
-  build_difficulty_1_10: number;
-  content_angle: string;
+  why_people_keep_paying: string;
+  fast_mvp: string;
+  unique_angle: string;
+  churn_risk: string;
+  validation_test: string;
+  scores: { pain: number; willingness_to_pay: number; simplicity: number; retention: number; fit: number };
+  final_verdict: string;
 };
 
 export type ScoredIdea = {

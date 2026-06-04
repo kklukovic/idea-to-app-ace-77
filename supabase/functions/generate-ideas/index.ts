@@ -1,7 +1,8 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { callAI } from "../_shared/ai.ts";
 
-const GEMINI_MODEL = "gemini-2.5-flash";
-const COST = 8;
+// Credit cost — single constant, trivial to change.
+const RESEARCH_IDEAS_CREDIT_COST = 10;
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -26,20 +27,23 @@ Deno.serve(async (req: Request) => {
     if (authErr || !user) return fail("Unauthorized", 401);
 
     // 2. Parse body
-    const { projectId, researchNotes = "", mode = "fast" } = await req.json();
+    const body = await req.json();
+    const { projectId, mode = "personalized", roughIdea = "" } = body;
     if (!projectId) return fail("projectId required", 400);
+    if (!["personalized", "surprise", "validate"].includes(mode)) {
+      return fail("Invalid mode — must be personalized | surprise | validate", 400);
+    }
 
     // 3. Load project (RLS enforces ownership)
     const { data: project, error: projErr } = await supabase
       .from("projects")
-      .select("profile_data, manual_research")
+      .select("profile_data")
       .eq("id", projectId)
       .single();
 
     if (projErr || !project) return fail("Project not found", 404);
-    if (!project.profile_data) return fail("Complete your Profile first", 400);
 
-    // 4. Read credits — service role bypasses the column-level grant
+    // 4. Check credits via service role (bypasses column-level RLS)
     const admin = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
@@ -52,90 +56,65 @@ Deno.serve(async (req: Request) => {
       .single();
 
     if (profErr || !prof) return fail("Could not read credits", 500);
-    if (prof.credits < COST) {
-      return fail(`Not enough credits — need ${COST}, have ${prof.credits}`, 402);
+    if (prof.credits < RESEARCH_IDEAS_CREDIT_COST) {
+      return fail(
+        `Not enough credits — need ${RESEARCH_IDEAS_CREDIT_COST}, have ${prof.credits}`,
+        402,
+      );
     }
 
-    // 5. Persist research notes if freshly provided
-    const notes = String(researchNotes).trim() || project.manual_research?.trim() || "";
-    if (String(researchNotes).trim()) {
-      await supabase
-        .from("projects")
-        .update({ manual_research: researchNotes })
-        .eq("id", projectId);
-    }
+    const profile = (project.profile_data ?? {}) as Record<string, string>;
 
-    // 6. Build Gemini prompt — extraction vs. generation depending on mode
-    const isResearch = mode === "research" && notes.trim().length > 0;
-    const prompt = isResearch
-      ? `You are a JSON extraction assistant for a solo founder app.
-The user ran a research prompt and got back a structured list of app ideas from an AI tool. Your job is to faithfully extract those ideas into the required JSON format — do NOT invent new ideas, do NOT replace or rewrite the ideas, do NOT add your own. Preserve the names, problems, evidence, and reasoning exactly as stated.
+    // ── STAGE 1: Hypothesis + community evidence generation ───────────────────
+    const { system: s1System, prompt: s1Prompt } = buildStage1(mode, profile, roughIdea);
 
-USER PROFILE: ${JSON.stringify(project.profile_data)}
-PASTED IDEAS OUTPUT:
-${notes}
+    const s1Result = await callAI({
+      system: s1System,
+      prompt: s1Prompt,
+      jsonMode: true,
+      temperature: 0.8,
+      maxTokens: 16384,
+    });
 
-Extract every idea from the pasted output above (typically 10). For each idea, map it to this JSON object — pull the information from the pasted text, paraphrase only if needed to fit the field:
-{ name (max 4 words, use the app name from the paste), promise (one sentence — the core value prop), problem (2-3 sentences — the pain being solved), evidence (what market signal was cited in the paste), target_user (who it is for), why_they_care (their motivation), usage_frequency (daily/weekly/monthly/occasional), monetization_angle (use the pricing from the paste, or lead magnet / $9-19/mo / $47-97 lifetime / $197+ premium), build_difficulty_1_10 (number — use the simplicity score from the paste if present, else estimate), content_angle (how this idea generates content or audience) }
+    if (!s1Result.text.trim()) return fail("Research stage returned no content — try again.", 502);
 
-Return ONLY a JSON array. No prose outside JSON.`
-      : `You are an expert app idea researcher and micro-SaaS strategist for solo founders.
-USER PROFILE: ${JSON.stringify(project.profile_data)}
-RESEARCH NOTES (may be empty): ${notes}
-Generate 5-7 practical digital tool ideas. If research notes are provided, ground ideas in them; otherwise reason from the profile. Rules: no generic ideas; each buildable as a simple web/PWA tool by a solo builder in 1-7 days; avoid ideas needing marketplace liquidity, heavy regulation, medical/legal accuracy, enterprise sales, or hardware.
-Return ONLY a JSON array of objects, no prose, each: { name (max 4 words), promise (one sentence), problem (2-3 sentences), evidence (what signal supports this — cite the research note if provided, else explain the reasoning), target_user, why_they_care, usage_frequency (daily/weekly/monthly/occasional), monetization_angle (lead magnet / $9-19/mo / $47-97 lifetime / $197+ premium), build_difficulty_1_10 (number), content_angle }.`;
+    // ── STAGE 2: Scoring + card generation ───────────────────────────────────
+    const { system: s2System, prompt: s2Prompt } = buildStage2(profile, s1Result.text);
 
-    // 7. Call Gemini 2.5 Flash
-    const geminiKey = Deno.env.get("GEMINI_API_KEY");
-    if (!geminiKey) return fail("GEMINI_API_KEY not configured", 500);
+    const s2Result = await callAI({
+      system: s2System,
+      prompt: s2Prompt,
+      jsonMode: true,
+      temperature: 0.3,
+      maxTokens: 16384,
+    });
 
-    const geminiRes = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${geminiKey}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [{ role: "user", parts: [{ text: prompt }] }],
-          generationConfig: {
-            temperature: isResearch ? 0.3 : 1.0,
-            maxOutputTokens: 8192,
-            responseMimeType: "application/json",
-          },
-        }),
-      },
-    );
-
-    if (!geminiRes.ok) {
-      const body = await geminiRes.text();
-      console.error("Gemini error:", geminiRes.status, body);
-      return fail(`AI error ${geminiRes.status} — try again.`, 502);
-    }
-
-    const geminiJson = await geminiRes.json();
-    const rawText: string =
-      geminiJson.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
-
-    // 8. Parse JSON safely.
-    // responseMimeType:"application/json" is set, but Gemini occasionally still wraps
-    // output in ```json fences or adds leading text. The regex below extracts the
-    // content between any fences first; if no fences are found it uses the raw text.
+    // Parse JSON robustly — strip markdown fences if provider added them anyway
     let ideas: unknown[];
     try {
-      const fenced = rawText.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
-      const toParse = (fenced ? fenced[1] : rawText).trim();
-      if (!toParse) throw new Error("empty response");
-      const parsed = JSON.parse(toParse);
-      if (!Array.isArray(parsed)) throw new Error("not an array");
-      ideas = parsed;
-    } catch (parseErr) {
-      console.error("JSON parse failed:", parseErr, "| Raw (first 500):", rawText.slice(0, 500));
+      const fenced = s2Result.text.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
+      const raw = (fenced ? fenced[1] : s2Result.text).trim();
+      if (!raw) throw new Error("empty");
+      const parsed = JSON.parse(raw);
+      ideas = Array.isArray(parsed) ? parsed : parsed?.ideas;
+      if (!Array.isArray(ideas)) throw new Error("not an array");
+    } catch (e) {
+      console.error("JSON parse failed:", e, "| s2[:500]:", s2Result.text.slice(0, 500));
       return fail("AI returned invalid JSON — try again.", 502);
     }
 
-    // 9. Success path — deduct credits first, then write audit + project
+    // Sort: Strong → Medium → Weak
+    const evidenceOrder: Record<string, number> = { Strong: 0, Medium: 1, Weak: 2 };
+    ideas.sort(
+      (a: any, b: any) =>
+        (evidenceOrder[a.evidence_strength] ?? 1) -
+        (evidenceOrder[b.evidence_strength] ?? 1),
+    );
+
+    // ── Credit deduction — only after successful generation ───────────────────
     const { error: deductErr } = await admin
       .from("profiles")
-      .update({ credits: prof.credits - COST })
+      .update({ credits: prof.credits - RESEARCH_IDEAS_CREDIT_COST })
       .eq("id", user.id);
 
     if (deductErr) return fail("Could not deduct credits", 500);
@@ -143,9 +122,9 @@ Return ONLY a JSON array of objects, no prose, each: { name (max 4 words), promi
     await admin.from("credit_usage").insert({
       user_id: user.id,
       project_id: projectId,
-      action: "discover",
-      credits_used: COST,
-      ai_model: GEMINI_MODEL,
+      action: "research_ideas",
+      credits_used: RESEARCH_IDEAS_CREDIT_COST,
+      ai_model: s2Result.model, // logs whichever provider actually answered stage 2
     });
 
     await supabase
@@ -159,6 +138,139 @@ Return ONLY a JSON array of objects, no prose, each: { name (max 4 words), promi
     return fail(e instanceof Error ? e.message : "Internal error", 500);
   }
 });
+
+// ── Prompts ───────────────────────────────────────────────────────────────────
+
+function profileStr(profile: Record<string, string>): string {
+  const has = Object.values(profile).some((v) => v?.trim());
+  if (!has) return "No user profile provided — generate ideas broadly.";
+  return `USER PROFILE:
+- Niche: ${profile.niche || "not specified"}
+- Expertise: ${profile.expertise || "not specified"}
+- Audience: ${profile.audience || "not specified"}
+- Current offer: ${profile.offer || "not specified"}
+- Preferred tool type: ${profile.tool_type || "not specified"}
+- Build skill level: ${profile.skill_level || "beginner"}
+- Time per week: ${profile.time_per_week || "5-10h"}`;
+}
+
+function buildStage1(
+  mode: string,
+  profile: Record<string, string>,
+  roughIdea: string,
+): { system: string; prompt: string } {
+  const taskInstr =
+    mode === "personalized"
+      ? `Based on the user profile, generate 8-10 specific micro-SaaS idea hypotheses tailored to their niche, audience, and goals. Each must be a practical digital tool buildable by a solo developer in 1-7 days.`
+      : mode === "surprise"
+      ? `Generate 8-10 diverse practical micro-SaaS idea hypotheses across different niches. Be creative but grounded — each must solve a specific recurring pain that people pay to solve. Not generic categories — specific tools for specific people in specific situations.`
+      : `The user has this rough idea: "${roughIdea}"
+
+Generate 8-10 stronger, more specific variants and adjacent ideas. Some refine the original, others challenge it with better angles or different audiences. All must be practically buildable solo.`;
+
+  const system =
+    `You are a senior micro-SaaS market researcher. You have deep knowledge of online communities, Reddit threads, niche forums, Indie Hackers discussions, and the recurring pain patterns people discuss across the internet. You output valid JSON arrays only.`;
+
+  const prompt =
+    `${profileStr(profile)}
+
+TASK: ${taskInstr}
+
+For EACH hypothesis, draw on your knowledge of online communities to describe WHERE this pain is discussed. Name specific subreddits, forums, or communities. Describe the types of threads (complaints, how-do-I questions, tool comparisons) and characterize what the audience actually says.
+
+EVIDENCE QUALITY RULES:
+- Only name communities that genuinely exist and discuss this topic
+- Describe thread patterns you know are real
+- Use representative/typical post titles rather than exact titles
+- For URLs: use community-level links (https://reddit.com/r/[subreddit]) unless certain of a specific post
+- For engagement: describe typical patterns ("posts like this get 50-200 comments") not invented exact numbers
+- If a community genuinely does NOT discuss this topic, set evidence_found: false
+
+Return ONLY a JSON array. Each item:
+{
+  "hypothesis": "concise problem statement",
+  "audience": "specific who",
+  "app_type": "what the tool does",
+  "monetization": "pricing model that fits",
+  "evidence_found": true,
+  "evidence": [
+    {
+      "platform": "Reddit",
+      "community": "r/freelance",
+      "post_title": "representative post type",
+      "url": "https://reddit.com/r/freelance",
+      "engagement": "typical: 80-150 comments on this topic",
+      "key_observation": "what the audience actually asks for or complains about"
+    }
+  ],
+  "no_evidence_note": ""
+}`;
+
+  return { system, prompt };
+}
+
+function buildStage2(
+  profile: Record<string, string>,
+  stage1Output: string,
+): { system: string; prompt: string } {
+  const has = Object.values(profile).some((v) => v?.trim());
+  const founderCtx = has
+    ? `niche=${profile.niche || "?"}, audience=${profile.audience || "?"}, skill=${profile.skill_level || "beginner"}, time=${profile.time_per_week || "5-10h"}`
+    : "no profile — score fit neutrally";
+
+  const system =
+    `You are a micro-SaaS strategist who turns raw market research into ranked, commercially honest idea cards for solo founders. You output valid JSON arrays only.`;
+
+  const prompt =
+    `FOUNDER CONTEXT: ${founderCtx}
+
+STAGE 1 RESEARCH — hypotheses with community evidence:
+${stage1Output}
+
+SCORING DIMENSIONS (each 1–10):
+- pain: urgency — many complaints, workarounds, repeated questions = high
+- willingness_to_pay: price mentions, existing paid tools, "worth it" signals = high
+- simplicity: solo dev ships useful MVP in under a week? fewer integrations = higher
+- retention: recurring return? data lock-in, workflow dependency, habit = high
+- fit: how well does this match the founder profile, skills, and audience?
+
+EVIDENCE STRENGTH RULES:
+- Strong: 3+ real community sources with meaningful engagement, recurring pain pattern clear
+- Medium: 1–2 real sources, OR strong reasoning with some evidence
+- Weak: evidence_found=false OR only 1 low-engagement source — still include, tag Weak
+
+For ideas where evidence_found=false: fill evidence_summary from hypothesis reasoning; set source_links to []; set evidence_strength to "Weak".
+
+Return ONLY a JSON array sorted Strong first, Medium second, Weak last. Each card:
+{
+  "name": "App Name (2–5 marketable words)",
+  "evidence_strength": "Strong|Medium|Weak",
+  "target_audience": "specific description of who",
+  "core_problem": "the exact pain in 1–2 sentences",
+  "evidence_summary": "what real people said or complained about — cite community names (2–3 sentences)",
+  "source_links": [
+    { "url": "...", "title": "...", "platform": "...", "engagement": "..." }
+  ],
+  "strongest_signal": "the single most compelling data point found",
+  "why_fits_user": "why this idea suits the founder profile, skills, and audience",
+  "usage_frequency": "daily|weekly|monthly",
+  "why_people_keep_paying": "what creates lock-in or recurring value",
+  "fast_mvp": "smallest useful version that proves the concept — what IN, what OUT",
+  "unique_angle": "how this stands out from existing tools or approaches",
+  "churn_risk": "main reason users might leave and how to prevent it",
+  "validation_test": "fastest way to validate demand before building anything",
+  "scores": {
+    "pain": 0,
+    "willingness_to_pay": 0,
+    "simplicity": 0,
+    "retention": 0,
+    "fit": 0
+  },
+  "final_verdict": "one commercially focused sentence on whether to build this"
+}`;
+
+  return { system, prompt };
+}
 
 function ok(body: unknown) {
   return new Response(JSON.stringify(body), {
