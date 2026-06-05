@@ -13,6 +13,7 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
+import { Route as AuthenticatedSavedIdeasRouteImport } from './routes/_authenticated/saved-ideas'
 import { Route as AuthenticatedProjectsRouteImport } from './routes/_authenticated/projects'
 import { Route as AuthenticatedLibraryRouteImport } from './routes/_authenticated/library'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
@@ -36,6 +37,11 @@ const IndexRoute = IndexRouteImport.update({
 const AuthenticatedSettingsRoute = AuthenticatedSettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedSavedIdeasRoute = AuthenticatedSavedIdeasRouteImport.update({
+  id: '/saved-ideas',
+  path: '/saved-ideas',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
 const AuthenticatedProjectsRoute = AuthenticatedProjectsRouteImport.update({
@@ -71,6 +77,7 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/library': typeof AuthenticatedLibraryRoute
   '/projects': typeof AuthenticatedProjectsRouteWithChildren
+  '/saved-ideas': typeof AuthenticatedSavedIdeasRoute
   '/settings': typeof AuthenticatedSettingsRoute
   '/project/$id': typeof AuthenticatedProjectIdRoute
   '/projects/new': typeof AuthenticatedProjectsNewRoute
@@ -81,6 +88,7 @@ export interface FileRoutesByTo {
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/library': typeof AuthenticatedLibraryRoute
   '/projects': typeof AuthenticatedProjectsRouteWithChildren
+  '/saved-ideas': typeof AuthenticatedSavedIdeasRoute
   '/settings': typeof AuthenticatedSettingsRoute
   '/project/$id': typeof AuthenticatedProjectIdRoute
   '/projects/new': typeof AuthenticatedProjectsNewRoute
@@ -93,6 +101,7 @@ export interface FileRoutesById {
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/library': typeof AuthenticatedLibraryRoute
   '/_authenticated/projects': typeof AuthenticatedProjectsRouteWithChildren
+  '/_authenticated/saved-ideas': typeof AuthenticatedSavedIdeasRoute
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
   '/_authenticated/project/$id': typeof AuthenticatedProjectIdRoute
   '/_authenticated/projects/new': typeof AuthenticatedProjectsNewRoute
@@ -105,6 +114,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/library'
     | '/projects'
+    | '/saved-ideas'
     | '/settings'
     | '/project/$id'
     | '/projects/new'
@@ -115,6 +125,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/library'
     | '/projects'
+    | '/saved-ideas'
     | '/settings'
     | '/project/$id'
     | '/projects/new'
@@ -126,6 +137,7 @@ export interface FileRouteTypes {
     | '/_authenticated/dashboard'
     | '/_authenticated/library'
     | '/_authenticated/projects'
+    | '/_authenticated/saved-ideas'
     | '/_authenticated/settings'
     | '/_authenticated/project/$id'
     | '/_authenticated/projects/new'
@@ -165,6 +177,13 @@ declare module '@tanstack/react-router' {
       path: '/settings'
       fullPath: '/settings'
       preLoaderRoute: typeof AuthenticatedSettingsRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/saved-ideas': {
+      id: '/_authenticated/saved-ideas'
+      path: '/saved-ideas'
+      fullPath: '/saved-ideas'
+      preLoaderRoute: typeof AuthenticatedSavedIdeasRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/projects': {
@@ -222,6 +241,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedLibraryRoute: typeof AuthenticatedLibraryRoute
   AuthenticatedProjectsRoute: typeof AuthenticatedProjectsRouteWithChildren
+  AuthenticatedSavedIdeasRoute: typeof AuthenticatedSavedIdeasRoute
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
   AuthenticatedProjectIdRoute: typeof AuthenticatedProjectIdRoute
 }
@@ -230,6 +250,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedLibraryRoute: AuthenticatedLibraryRoute,
   AuthenticatedProjectsRoute: AuthenticatedProjectsRouteWithChildren,
+  AuthenticatedSavedIdeasRoute: AuthenticatedSavedIdeasRoute,
   AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
   AuthenticatedProjectIdRoute: AuthenticatedProjectIdRoute,
 }
@@ -246,3 +267,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
