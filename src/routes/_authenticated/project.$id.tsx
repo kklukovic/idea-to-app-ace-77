@@ -11,7 +11,7 @@ import {
   Target, Sparkles, Zap, FileCode, Rocket, Check, Lock, ArrowRight, Loader2,
   RefreshCw, ChevronDown, Copy, Download, ExternalLink, AlertTriangle, Bookmark, BookmarkCheck,
 } from "lucide-react";
-import { type Idea, type ScoredIdea } from "@/lib/zita.functions";
+
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/project/$id")({
