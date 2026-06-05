@@ -649,15 +649,25 @@ function ResearchIdeaCard({
   isChosen,
   onToggle,
   onChoose,
+  isSaved,
+  onSave,
+  rank,
+  showTotal,
 }: {
   idea: ResearchedIdea;
   expanded: boolean;
   isChosen: boolean;
   onToggle: () => void;
   onChoose: () => void;
+  isSaved?: boolean;
+  onSave?: () => void;
+  rank?: number;
+  showTotal?: boolean;
 }) {
   const strength = idea.evidence_strength ?? "Weak";
   const isWeak = strength === "Weak";
+  const total = totalScore(idea.scores);
+  const totalColor = total >= 40 ? "text-green-500" : total >= 30 ? "text-yellow-500" : "text-muted-foreground";
 
   return (
     <div
@@ -671,6 +681,11 @@ function ResearchIdeaCard({
         onClick={onToggle}
         className="flex w-full items-start gap-3 p-4 text-left transition hover:bg-accent/30"
       >
+        {typeof rank === "number" && (
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-primary/30 bg-primary/10 text-sm font-bold text-primary">
+            {rank}
+          </div>
+        )}
         <div className="min-w-0 flex-1 space-y-1.5">
           <div className="flex flex-wrap items-center gap-2">
             <span className="font-semibold">{idea.name}</span>
@@ -682,6 +697,11 @@ function ResearchIdeaCard({
             >
               {strength}
             </span>
+            {showTotal && (
+              <span className={cn("rounded-md border border-border px-2 py-0.5 text-xs font-bold tabular-nums", totalColor)}>
+                {total}/50
+              </span>
+            )}
             <span className="rounded-full border border-border px-2 py-0.5 text-xs text-muted-foreground">
               {idea.usage_frequency}
             </span>
@@ -693,6 +713,9 @@ function ResearchIdeaCard({
           </div>
           <p className="text-xs text-muted-foreground">{idea.target_audience}</p>
           <p className="line-clamp-2 text-sm text-foreground/90">{idea.core_problem}</p>
+          {showTotal && idea.final_verdict && (
+            <p className="line-clamp-1 text-xs italic text-muted-foreground">{idea.final_verdict}</p>
+          )}
           {isWeak && (
             <p className="flex items-center gap-1.5 text-xs text-amber-400">
               <AlertTriangle className="h-3 w-3" />
@@ -755,9 +778,14 @@ function ResearchIdeaCard({
 
           {idea.scores && (
             <div>
-              <span className="text-xs uppercase tracking-wider text-muted-foreground">
-                Scores (1–10)
-              </span>
+              <div className="flex items-center justify-between">
+                <span className="text-xs uppercase tracking-wider text-muted-foreground">
+                  Scores (1–10)
+                </span>
+                <span className={cn("text-xs font-bold tabular-nums", totalColor)}>
+                  Total {total}/50
+                </span>
+              </div>
               <div className="mt-2 flex flex-wrap gap-4">
                 {(Object.entries(idea.scores) as [string, number][]).map(([key, val]) => (
                   <div key={key} className="flex flex-col items-center gap-0.5">
@@ -787,7 +815,7 @@ function ResearchIdeaCard({
             <p className="mt-1 font-medium text-foreground">{idea.final_verdict}</p>
           </div>
 
-          <div className="border-t border-border pt-3">
+          <div className="flex flex-wrap items-center gap-2 border-t border-border pt-3">
             <Button
               size="sm"
               variant={isChosen ? "default" : "outline"}
@@ -802,6 +830,17 @@ function ResearchIdeaCard({
                 "Choose this idea"
               )}
             </Button>
+            {onSave && (
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={onSave}
+                disabled={isSaved}
+                className="text-muted-foreground hover:text-foreground"
+              >
+                {isSaved ? <><BookmarkCheck className="h-3 w-3" /> Saved</> : <><Bookmark className="h-3 w-3" /> Save for later</>}
+              </Button>
+            )}
           </div>
         </div>
       )}
