@@ -615,14 +615,20 @@ function DiscoverPanel({ project, onSaved }: { project: any; onSaved: (next: Sta
               isChosen={chosen === idea.name}
               onToggle={() => setExpanded(expanded === i ? null : i)}
               onChoose={() => chooseIdea(idea)}
+              isSaved={savedNames.has(idea.name)}
+              onSave={() => saveForLater(idea)}
             />
           ))}
-          <div className="border-t border-border pt-4">
+          <div className="flex flex-wrap items-center gap-3 border-t border-border pt-4">
+            <Button variant="outline" onClick={() => run(true)} disabled={running}>
+              <RefreshCw className="h-4 w-4" />
+              I don't like these — give me 10 more (10 credits)
+            </Button>
             <Button
-              onClick={goToScore}
+              onClick={continueToScore}
               className="bg-gradient-electric text-primary-foreground shadow-glow"
             >
-              Score All Ideas <ArrowRight className="h-4 w-4" />
+              Continue <ArrowRight className="h-4 w-4" />
             </Button>
           </div>
         </div>
