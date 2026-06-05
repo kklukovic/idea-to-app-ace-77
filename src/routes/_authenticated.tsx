@@ -1,6 +1,6 @@
 import { createFileRoute, Outlet, Link, redirect, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { LayoutDashboard, FolderKanban, BookOpen, Settings, Plus, LogOut, Sparkles, Coins } from "lucide-react";
+import { LayoutDashboard, FolderKanban, BookOpen, Bookmark, Settings, Plus, LogOut, Sparkles, Coins } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
