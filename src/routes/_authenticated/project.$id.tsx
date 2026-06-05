@@ -381,6 +381,39 @@ type ResearchedIdea = {
   final_verdict: string;
 };
 
+// Total score across the 5 sub-scores (out of 50). Single source of truth — change here to adjust formula.
+export function totalScore(scores: ResearchedIdea["scores"] | undefined | null): number {
+  if (!scores) return 0;
+  return (scores.pain ?? 0) + (scores.willingness_to_pay ?? 0) + (scores.simplicity ?? 0) + (scores.retention ?? 0) + (scores.fit ?? 0);
+}
+
+function useSavedIdeas(projectId: string) {
+  const qc = useQueryClient();
+  const { data: savedNames } = useQuery({
+    queryKey: ["saved-ideas-names", projectId],
+    queryFn: async () => {
+      const { data } = await supabase.from("saved_ideas").select("idea").eq("source_project_id", projectId);
+      const set = new Set<string>();
+      (data ?? []).forEach((r: any) => { const n = r?.idea?.name; if (n) set.add(n); });
+      return set;
+    },
+  });
+  const save = async (idea: ResearchedIdea) => {
+    const { data: u } = await supabase.auth.getUser();
+    if (!u.user) { toast.error("Not signed in"); return; }
+    const { error } = await supabase.from("saved_ideas").insert({
+      user_id: u.user.id,
+      source_project_id: projectId,
+      idea: idea as never,
+    });
+    if (error) { toast.error(error.message); return; }
+    toast.success(`Saved "${idea.name}" for later`);
+    qc.invalidateQueries({ queryKey: ["saved-ideas-names", projectId] });
+    qc.invalidateQueries({ queryKey: ["saved-ideas-all"] });
+  };
+  return { savedNames: savedNames ?? new Set<string>(), save };
+}
+
 function DiscoverPanel({ project, onSaved }: { project: any; onSaved: (next: Status) => void }) {
   const rawIdeas = project.ideas as any[] | null;
   const existingIdeas: ResearchedIdea[] | null =
@@ -398,6 +431,7 @@ function DiscoverPanel({ project, onSaved }: { project: any; onSaved: (next: Sta
     (project.chosen_idea as any)?.name ?? null,
   );
   const [discoverError, setDiscoverError] = useState<string | null>(null);
+  const { savedNames, save: saveForLater } = useSavedIdeas(project.id);
 
   useEffect(() => {
     if (!running) { setLoadingStepIdx(0); return; }
@@ -448,7 +482,7 @@ function DiscoverPanel({ project, onSaved }: { project: any; onSaved: (next: Sta
     onSaved("score");
   };
 
-  const goToScore = async () => {
+  const continueToScore = async () => {
     if (["profile", "discover"].includes(project.status as string)) {
       const { error } = await supabase
         .from("projects")
