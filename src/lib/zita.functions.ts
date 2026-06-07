@@ -356,10 +356,13 @@ Generate a complete Launch Kit as Markdown with sections:
 
 Return ONLY the markdown, no preamble.`;
 
-    const md = (await callAI({ system, user })) as string;
-    await context.supabase.from("projects").update({
-      launch_kit_markdown: md, status: "launch",
-    }).eq("id", data.projectId);
+    const md = await withRefundOnFailure(context.userId, "launch", async () => {
+      const m = (await callAI({ system, user })) as string;
+      await context.supabase.from("projects").update({
+        launch_kit_markdown: m, status: "launch",
+      }).eq("id", data.projectId);
+      return m;
+    });
     return { markdown: md };
   });
 
