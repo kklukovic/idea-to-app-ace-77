@@ -134,6 +134,7 @@ Deno.serve(async (req: Request) => {
         "| raw length:", s2Result.text.length,
         "| FULL raw text:\n", s2Result.text,
       );
+      await refund();
       return fail("AI returned invalid JSON — try again.", 502);
     }
 
@@ -145,20 +146,13 @@ Deno.serve(async (req: Request) => {
         (evidenceOrder[b.evidence_strength] ?? 1),
     );
 
-    // ── Credit deduction — only after successful generation ───────────────────
-    const { error: deductErr } = await admin
-      .from("profiles")
-      .update({ credits: prof.credits - RESEARCH_IDEAS_CREDIT_COST })
-      .eq("id", user.id);
-
-    if (deductErr) return fail("Could not deduct credits", 500);
-
+    // Audit log (service role bypasses RLS — user inserts are blocked by policy)
     await admin.from("credit_usage").insert({
       user_id: user.id,
       project_id: projectId,
       action: "research_ideas",
       credits_used: RESEARCH_IDEAS_CREDIT_COST,
-      ai_model: s2Result.model, // logs whichever provider actually answered stage 2
+      ai_model: s2Result.model,
     });
 
     await supabase
