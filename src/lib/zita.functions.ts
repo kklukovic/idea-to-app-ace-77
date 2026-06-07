@@ -305,10 +305,13 @@ Then at the very end:
 
 Return ONLY the markdown, no preamble.`;
 
-    const md = (await callAI({ system, user })) as string;
-    await context.supabase.from("projects").update({
-      blueprint_markdown: md, chosen_idea: chosen, status: "blueprint",
-    }).eq("id", data.projectId);
+    const md = await withRefundOnFailure(context.userId, "blueprint", async () => {
+      const m = (await callAI({ system, user })) as string;
+      await context.supabase.from("projects").update({
+        blueprint_markdown: m, chosen_idea: chosen, status: "blueprint",
+      }).eq("id", data.projectId);
+      return m;
+    });
     return { markdown: md };
   });
 
