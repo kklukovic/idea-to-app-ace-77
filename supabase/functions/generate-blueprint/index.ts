@@ -122,6 +122,7 @@ Be concrete and buildable. No generic filler.`;
     if (!geminiRes.ok) {
       const body = await geminiRes.text();
       console.error("Gemini error:", geminiRes.status, body);
+      await refund();
       return fail(`AI error ${geminiRes.status} — try again.`, 502);
     }
 
@@ -130,17 +131,11 @@ Be concrete and buildable. No generic filler.`;
       geminiJson.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
 
     if (!markdown.trim()) {
+      await refund();
       return fail("AI returned empty response — try again.", 502);
     }
 
-    // 7. Deduct credits (only after successful generation)
-    const { error: deductErr } = await admin
-      .from("profiles")
-      .update({ credits: prof.credits - COST })
-      .eq("id", user.id);
-    if (deductErr) return fail("Could not deduct credits", 500);
-
-    // 8. Audit log
+    // Audit log (service role bypasses RLS)
     await admin.from("credit_usage").insert({
       user_id: user.id,
       project_id: projectId,
