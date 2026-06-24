@@ -139,6 +139,7 @@ const faqs = [
 // ── Video config — paste the YouTube/Vimeo embed URL when the videos are ready ──
 const VIDEO_WHAT_IS_ZITA = ""; // e.g. "https://www.youtube.com/embed/VIDEO_ID"
 const VIDEO_FULL_DEMO    = ""; // e.g. "https://www.youtube.com/embed/VIDEO_ID"
+const SHOW_VIDEO_PLACEHOLDERS = false; // temporarily hidden
 
 function CtaButton({ label = "Get Founder Access - $97", large = false }: { label?: string; large?: boolean }) {
   return (
@@ -233,7 +234,9 @@ function Landing() {
           ZITA OS is a guided 5-step system that takes you from zero idea to a validated, blueprinted, launch-ready app in one sitting. No guessing. No wasted builds. No dev bills.
         </p>
         <div className="mx-auto mt-8 w-full max-w-2xl">
-          <VideoPlaceholder label="Watch: What is ZITA OS (90 seconds)" src={VIDEO_WHAT_IS_ZITA} />
+          {SHOW_VIDEO_PLACEHOLDERS && (
+            <VideoPlaceholder label="Watch: What is ZITA OS (90 seconds)" src={VIDEO_WHAT_IS_ZITA} />
+          )}
         </div>
         <div className="mt-8 flex flex-col items-center gap-3">
           <CtaButton label="Get Instant Access - $97" large />
@@ -357,7 +360,9 @@ function Landing() {
 
       {/* DEMO VIDEO */}
       <section className="mx-auto max-w-5xl px-6 pb-4">
-        <VideoPlaceholder label="Watch the full demo (3 minutes)" src={VIDEO_FULL_DEMO} />
+        {SHOW_VIDEO_PLACEHOLDERS && (
+          <VideoPlaceholder label="Watch the full demo (3 minutes)" src={VIDEO_FULL_DEMO} />
+        )}
       </section>
 
       {/* FIVE STEPS */}
