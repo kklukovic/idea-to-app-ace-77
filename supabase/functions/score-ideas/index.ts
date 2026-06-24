@@ -79,7 +79,7 @@ Deno.serve(async (req: Request) => {
     };
 
     // 5. Build prompt (exact system prompt from spec)
-    const profile = project.profile_data as Record<string, string>;
+    const profile = clampProfile(project.profile_data);
     const prompt =
       `You are evaluating digital tool ideas for a solo founder.
 IDEAS: ${JSON.stringify(project.ideas)}
@@ -188,6 +188,16 @@ function fail(message: string, status: number) {
     status,
     headers: { ...cors, "Content-Type": "application/json" },
   });
+}
+
+const PROFILE_FIELD_MAX = 2000;
+function clampProfile(raw: unknown): Record<string, string> {
+  const src = (raw ?? {}) as Record<string, unknown>;
+  const out: Record<string, string> = {};
+  for (const [k, v] of Object.entries(src)) {
+    out[k] = typeof v === "string" ? v.slice(0, PROFILE_FIELD_MAX) : "";
+  }
+  return out;
 }
 
 function parseJsonFromModel(rawText: string): unknown {

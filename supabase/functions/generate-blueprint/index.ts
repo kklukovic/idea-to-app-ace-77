@@ -63,7 +63,7 @@ Deno.serve(async (req: Request) => {
 
     // 5. Build prompt
     const idea = project.chosen_idea as Record<string, unknown>;
-    const profile = project.profile_data as Record<string, string>;
+    const profile = clampProfile(project.profile_data);
 
     const prompt =
       `You are a senior product manager writing a build-ready blueprint for a solo founder using AI builders (Lovable, Codex).
@@ -160,6 +160,16 @@ Be concrete and buildable. No generic filler.`;
     return fail(e instanceof Error ? e.message : "Internal error", 500);
   }
 });
+
+const PROFILE_FIELD_MAX = 2000;
+function clampProfile(raw: unknown): Record<string, string> {
+  const src = (raw ?? {}) as Record<string, unknown>;
+  const out: Record<string, string> = {};
+  for (const [k, v] of Object.entries(src)) {
+    out[k] = typeof v === "string" ? v.slice(0, PROFILE_FIELD_MAX) : "";
+  }
+  return out;
+}
 
 function ok(body: unknown) {
   return new Response(JSON.stringify(body), {

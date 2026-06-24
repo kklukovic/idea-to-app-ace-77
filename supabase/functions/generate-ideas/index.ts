@@ -66,7 +66,7 @@ Deno.serve(async (req: Request) => {
       await admin.rpc("refund_credits", { _user_id: user.id, _amount: RESEARCH_IDEAS_CREDIT_COST });
     };
 
-    const profile = (project.profile_data ?? {}) as Record<string, string>;
+    const profile = clampProfile(project.profile_data);
 
     // ── STAGE 1: Hypothesis + community evidence generation ───────────────────
     const { system: s1System, prompt: s1Prompt } = buildStage1(mode, profile, roughIdea);
@@ -170,6 +170,17 @@ Deno.serve(async (req: Request) => {
 });
 
 // ── Prompts ───────────────────────────────────────────────────────────────────
+
+// Hard cap each profile field server-side to prevent AI cost amplification.
+const PROFILE_FIELD_MAX = 2000;
+function clampProfile(raw: unknown): Record<string, string> {
+  const src = (raw ?? {}) as Record<string, unknown>;
+  const out: Record<string, string> = {};
+  for (const [k, v] of Object.entries(src)) {
+    out[k] = typeof v === "string" ? v.slice(0, PROFILE_FIELD_MAX) : "";
+  }
+  return out;
+}
 
 function profileStr(profile: Record<string, string>): string {
   const has = Object.values(profile).some((v) => v?.trim());
